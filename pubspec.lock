@@ -143,7 +143,7 @@ packages:
     source: hosted
     version: "5.0.0"
   flutter_svg:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: flutter_svg
       sha256: "87fbd7c534435b6c5d9d98b01e1fd527812b82e68ddd8bd35fc45ed0fa8f0a95"
@@ -377,7 +377,7 @@ packages:
     source: hosted
     version: "2.3.0"
   percent_indicator:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: percent_indicator
       sha256: "157d29133bbc6ecb11f923d36e7960a96a3f28837549a20b65e5135729f0f9fd"
@@ -472,10 +472,9 @@ packages:
   syncfusion_flutter_calendar:
     dependency: "direct main"
     description:
-      name: syncfusion_flutter_calendar
-      sha256: "20118a598cf5ae5b7ec84fa364e2b51070800f078466158fcd25864e1b5a2cfd"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/syncfusion_flutter_calendar/syncfusion_flutter_calendar-27.2.5"
+      relative: true
+    source: path
     version: "27.2.5"
   syncfusion_flutter_core:
     dependency: "direct main"
@@ -510,7 +509,7 @@ packages:
     source: hosted
     version: "0.7.7"
   timeline_tile:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: timeline_tile
       sha256: "85ec2023c67137397c2812e3e848b2fb20b410b67cd9aff304bb5480c376fc0c"

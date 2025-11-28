@@ -1,0 +1,387 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:my_app/core/utils/async_value.dart';
+import 'package:my_app/core/utils/locator.dart';
+import 'package:my_app/data/models/employee.dart';
+import 'package:my_app/data/models/shift.dart';
+import 'package:my_app/data/repositories/employee_repository.dart';
+import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/core/utils/internal_notification/notify_service.dart';
+import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
+import 'package:uuid/uuid.dart';
+
+class CreateShiftDialog extends StatefulWidget {
+  const CreateShiftDialog({super.key});
+
+  @override
+  State<CreateShiftDialog> createState() => _CreateShiftDialogState();
+}
+
+class _CreateShiftDialogState extends State<CreateShiftDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _shiftRepository = locator<ShiftRepository>();
+  final _employeeRepository = locator<EmployeeRepository>();
+
+  final _state = ValueNotifier<AsyncValue<void>>(const AsyncData(null));
+  final _employeesState = ValueNotifier<AsyncValue<List<Employee>>>(const AsyncLoading());
+
+  String? _selectedEmployeeId;
+  String? _selectedRole;
+  String? _selectedBranch;
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 18, minute: 0);
+  bool _ignoreWarning = false;
+
+  final List<String> _roles = ['Администратор', 'Повар', 'Официант', 'Бармен'];
+  final List<String> _branches = ['ТЦ Мега', 'Центр', 'Аэропорт'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmployees();
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final employees = await _employeeRepository.getEmployees();
+      _employeesState.value = AsyncData(employees);
+    } catch (e, s) {
+      _employeesState.value = AsyncError(e.toString(), e, s);
+    }
+  }
+
+  @override
+  void dispose() {
+    _state.dispose();
+    _employeesState.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _selectTime(bool isStart) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isStart ? _startTime : _endTime,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
+      });
+    }
+  }
+
+  double get _duration {
+    final start = _startTime.hour + _startTime.minute / 60.0;
+    final end = _endTime.hour + _endTime.minute / 60.0;
+    if (end < start) return (24 - start) + end;
+    return end - start;
+  }
+
+  bool get _hasConflict {
+    // Mock conflict logic: Employee with ID '1' has a conflict
+    return _selectedEmployeeId == '1';
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_hasConflict && !_ignoreWarning) return;
+
+    _state.value = const AsyncLoading();
+
+    try {
+      final startDateTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _startTime.hour,
+        _startTime.minute,
+      );
+
+      var endDateTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _endTime.hour,
+        _endTime.minute,
+      );
+
+      if (endDateTime.isBefore(startDateTime)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
+
+      final shift = Shift(
+        id: const Uuid().v4(),
+        employeeId: _selectedEmployeeId!,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        status: 'scheduled',
+      );
+
+      await _shiftRepository.createShift(shift);
+
+      if (!mounted) return;
+      
+      locator<NotifyService>().setToastEvent(
+        ToastEventSuccess(message: 'Смена создана. Уведомление отправлено'),
+      );
+      Navigator.pop(context, true);
+    } catch (e, s) {
+      _state.value = AsyncError(e.toString(), e, s);
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(message: 'Ошибка при создании смены: ${e.toString()}'),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Создать смену',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                ValueListenableBuilder<AsyncValue<List<Employee>>>(
+                  valueListenable: _employeesState,
+                  builder: (context, state, child) {
+                    if (state.isLoading) {
+                      return const LinearProgressIndicator();
+                    }
+                    
+                    final employees = state.dataOrNull ?? [];
+                    
+                    return DropdownButtonFormField<String>(
+                      value: _selectedEmployeeId,
+                      decoration: const InputDecoration(
+                        labelText: 'Сотрудник',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: employees.map((e) {
+                        return DropdownMenuItem(
+                          value: e.id,
+                          child: Text('${e.firstName} ${e.lastName}'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedEmployeeId = value;
+                          _ignoreWarning = false;
+                        });
+                      },
+                      validator: (value) =>
+                          value == null ? 'Выберите сотрудника' : null,
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedRole,
+                        decoration: const InputDecoration(
+                          labelText: 'Должность',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _roles.map((r) {
+                          return DropdownMenuItem(value: r, child: Text(r));
+                        }).toList(),
+                        onChanged: (value) => setState(() => _selectedRole = value),
+                        validator: (value) =>
+                            value == null ? 'Выберите должность' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedBranch,
+                        decoration: const InputDecoration(
+                          labelText: 'Филиал',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _branches.map((b) {
+                          return DropdownMenuItem(value: b, child: Text(b));
+                        }).toList(),
+                        onChanged: (value) => setState(() => _selectedBranch = value),
+                        validator: (value) =>
+                            value == null ? 'Выберите филиал' : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: _selectDate,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Дата',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(DateFormat('dd.MM.yyyy').format(_selectedDate)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectTime(true),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Начало',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.access_time),
+                          ),
+                          child: Text(_startTime.format(context)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectTime(false),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Конец',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.access_time),
+                          ),
+                          child: Text(_endTime.format(context)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Длительность: ${_duration.toStringAsFixed(1)} ч',
+                  style: TextStyle(
+                    color: _duration < 2 ? Colors.red : Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+                if (_hasConflict) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      border: Border.all(color: Colors.orange),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.warning_amber, color: Colors.orange),
+                            SizedBox(width: 8),
+                            Text(
+                              'Сотрудник просил выходной',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _ignoreWarning,
+                              onChanged: (value) {
+                                setState(() => _ignoreWarning = value ?? false);
+                              },
+                            ),
+                            const Text('Игнорировать предупреждение'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                ValueListenableBuilder<AsyncValue<void>>(
+                  valueListenable: _state,
+                  builder: (context, state, child) {
+                    if (state.hasError) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          'Ошибка: ${state.errorOrNull}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      );
+                    }
+
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: state.isLoading || (_hasConflict && !_ignoreWarning)
+                            ? null
+                            : _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: state.isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Сохранить'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

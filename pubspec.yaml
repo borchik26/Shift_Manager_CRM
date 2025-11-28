@@ -57,9 +57,13 @@ dependencies:
   # UI Components - Tables
   pluto_grid: ^8.0.0
 
-  # UI Components - Calendar
-  syncfusion_flutter_calendar: ^27.0.0
-  syncfusion_flutter_core: ^27.0.0
+  # UI Components - Calendar (patched locally for Flutter 3.24 SelectionDetails conflict)
+  syncfusion_flutter_calendar: ^27.2.5
+  syncfusion_flutter_core: ^27.2.5
+
+dependency_overrides:
+  syncfusion_flutter_calendar:
+    path: third_party/syncfusion_flutter_calendar/syncfusion_flutter_calendar-27.2.5
 
   # UI Components - Timeline
   timeline_tile: ^2.0.0

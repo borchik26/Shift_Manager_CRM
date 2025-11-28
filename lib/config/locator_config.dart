@@ -5,6 +5,7 @@ import 'package:my_app/config/route_config.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
+import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/data/services/api_service.dart';
 import 'package:my_app/data/services/mock_api_service.dart';
 import 'package:my_app/data/repositories/auth_repository.dart';
@@ -39,6 +40,11 @@ final modules = [
   Module<AuthRepository>(
     builder: () => AuthRepository(apiService: locator<ApiService>()),
     lazy: true,
+  ),
+  // App Services (Dependent on Repositories)
+  Module<AuthService>(
+    builder: () => AuthService(authRepository: locator<AuthRepository>()),
+    lazy: false,
   ),
   Module<EmployeeRepository>(
     builder: () => EmployeeRepository(apiService: locator<ApiService>()),

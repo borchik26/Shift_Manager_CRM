@@ -97,10 +97,12 @@ class AppRouterDelegate extends RouterDelegate<RouteData> {
   @override
   void addListener(VoidCallback listener) {
     _routerService.navigationStack.addListener(listener);
+    locator<AuthService>().currentUserNotifier.addListener(listener);
   }
 
   @override
   void removeListener(VoidCallback listener) {
     _routerService.navigationStack.removeListener(listener);
+    locator<AuthService>().currentUserNotifier.removeListener(listener);
   }
 }

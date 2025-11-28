@@ -12,5 +12,12 @@ void main() {
   );
   
   configureUrlStrategy();
+  
+  // Global error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // In production, send to crash reporting service
+  };
+
   runApp(const StartupView());
 }

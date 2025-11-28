@@ -59,6 +59,7 @@ class MockApiService implements ApiService {
         hireDate: DateTime.now().subtract(Duration(days: 365 * (i % 5))),
         email: 'employee${i + 1}@company.com',
         phone: '+7 (900) ${100 + i}-${10 + i}-${20 + i}',
+        avatarUrl: 'https://i.pravatar.cc/150?u=emp_${i + 1}',
       ));
     }
 
@@ -91,7 +92,8 @@ class MockApiService implements ApiService {
     await Future.delayed(_delay);
 
     // Simple mock authentication
-    if (username == 'admin' && password == 'admin') {
+    if ((username == 'admin' || username == 'admin@example.com') &&
+        (password == 'admin' || password == 'password123')) {
       _currentUser = const User(
         id: 'user_1',
         username: 'admin',

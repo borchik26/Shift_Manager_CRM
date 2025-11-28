@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:my_app/core/ui/constants/border_radius.dart';
 import 'package:my_app/core/ui/constants/breakpoints.dart';
 import 'package:my_app/core/ui/constants/durations.dart';
@@ -8,178 +8,64 @@ import 'package:my_app/core/ui/constants/shadows.dart';
 import 'package:my_app/core/ui/constants/spacing.dart';
 import 'package:my_app/core/ui/constants/text_styles.dart';
 
-/// AppTheme is a class that builds a theme for the app.
-/// By default this will support light and dark mode.
-///
-/// you can access different theme extensions from the context
-///
-/// ```dart
-/// context.textStyles.standard
-/// context.neutralColors.neutral50
-/// context.borderRadius.md
-/// context.spacing.md
-/// context.durations.duration200
-/// context.shadows.sm
-/// ```
-///
-/// Some are also just instances of the class, so you can access them directly without context:
-///
-/// ```dart
-/// CustomSpacing.instance.md
-/// CustomDurations.instance.duration200
-/// ```
 class AppTheme {
   static ThemeData buildTheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    final textStyles = CustomTextStyles();
-    final borderRadius = CustomBorderRadius();
-    final breakpoints = CustomBreakpoints();
-    final shadows = CustomShadows();
-    final kitColors = KitColorsExtension();
+    final isLight = brightness == Brightness.light;
+    final baseTheme = isLight ? ThemeData.light() : ThemeData.dark();
 
-    return ThemeData(
-      brightness: brightness,
-      colorScheme: ColorScheme(
-        brightness: brightness,
-        surface: isDark ? kitColors.neutral900 : kitColors.neutral100,
-        primary: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        onPrimary: isDark ? kitColors.neutral950 : kitColors.neutral50,
-        secondary: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        onSecondary: isDark ? kitColors.neutral950 : kitColors.neutral50,
-        error: Colors.red.shade400,
-        onError: kitColors.neutral50,
-        onSurface: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        surfaceTint: isDark ? kitColors.neutral900 : kitColors.neutral100,
-      ),
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: <TargetPlatform, PageTransitionsBuilder>{
-          // Set the predictive back transitions for Android.
-          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
-        },
-      ),
-      scaffoldBackgroundColor: isDark
-          ? kitColors.neutral900
-          : kitColors.neutral100,
-      appBarTheme: AppBarTheme(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          // For iOS: dark icons in light mode, light icons in dark mode
-          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-          // For Android: dark icons in light mode, light icons in dark mode
-          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        ),
-      ),
-      dividerTheme: DividerThemeData(
-        color: isDark ? kitColors.neutral800 : kitColors.neutral200,
-      ),
-      textTheme: TextTheme(
-        bodyLarge: textStyles.lg.copyWith(
-          color: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        ),
-        bodyMedium: textStyles.standard.copyWith(
-          color: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        ),
-        titleMedium: textStyles.standard.copyWith(
-          color: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        ),
-        headlineLarge: textStyles.xxl.copyWith(
-          color: kitColors.neutral950,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      iconTheme: IconThemeData(
-        color: isDark ? kitColors.neutral50 : kitColors.neutral950,
-      ),
-      extensions: [textStyles, borderRadius, breakpoints, shadows, kitColors],
+    return baseTheme.copyWith(
       useMaterial3: true,
-      splashFactory: NoSplash.splashFactory,
-      highlightColor: Colors.white.withValues(alpha: .1),
-      dropdownMenuTheme: DropdownMenuThemeData(
-        textStyle: TextStyle(
-          color: isDark ? kitColors.neutral50 : kitColors.neutral950,
-        ),
-        menuStyle: MenuStyle(
-          backgroundColor: WidgetStatePropertyAll(
-            isDark ? kitColors.neutral900 : kitColors.neutral100,
-          ),
-          surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: isDark ? kitColors.neutral900 : kitColors.neutral100,
-          border: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: isDark ? kitColors.neutral800 : kitColors.neutral200,
-            ),
-            borderRadius: borderRadius.md,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: isDark ? kitColors.neutral800 : kitColors.neutral200,
-            ),
-            borderRadius: borderRadius.md,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: isDark ? kitColors.neutral800 : kitColors.neutral200,
-            ),
-            borderRadius: borderRadius.md,
-          ),
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: CustomSpacing.instance.md,
-            vertical: CustomSpacing.instance.sm,
-          ),
-        ),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF007AFF),
+        brightness: brightness,
+        background: isLight ? const Color(0xFFF5F7FA) : const Color(0xFF121212),
+        surface: isLight ? Colors.white : const Color(0xFF1E1E1E),
       ),
-      popupMenuTheme: PopupMenuThemeData(
-        color: isDark ? kitColors.neutral900 : kitColors.neutral100,
-        textStyle: TextStyle(
-          color: isDark ? kitColors.neutral50 : kitColors.neutral950,
+      textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
+        color: isLight ? Colors.white : const Color(0xFF1E1E1E),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        filled: true,
+        fillColor: isLight ? Colors.white : const Color(0xFF2C2C2C),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: borderRadius.md),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: borderRadius.md),
-          side: BorderSide(
-            color: isDark ? kitColors.neutral800 : kitColors.neutral200,
+          backgroundColor: const Color(0xFF007AFF),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
       ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: borderRadius.md),
-        ),
-      ),
+      extensions: [
+        const CustomSpacing(),
+        const CustomTextStyles(),
+        const KitColorsExtension(),
+        const CustomShadows(),
+        const CustomBorderRadius(),
+        const CustomDurations(),
+        const CustomBreakpoints(),
+      ],
     );
   }
 }
 
-extension ThemeDataX on BuildContext {
+extension AppThemeExtension on BuildContext {
   ThemeData get theme => Theme.of(this);
-
-  CustomTextStyles get textStyles =>
-      Theme.of(this).extension<CustomTextStyles>()!;
-
-  KitColorsExtension get kitColors =>
-      Theme.of(this).extension<KitColorsExtension>()!;
-
-  CustomBorderRadius get borderRadius =>
-      Theme.of(this).extension<CustomBorderRadius>()!;
-
-  CustomBreakpoints get breakpoints =>
-      Theme.of(this).extension<CustomBreakpoints>()!;
-
-  CustomDurations get durations => CustomDurations.instance;
-
-  CustomSpacing get spacing => CustomSpacing.instance;
-
-  CustomShadows get shadows => Theme.of(this).extension<CustomShadows>()!;
+  CustomSpacing get spacing => theme.extension<CustomSpacing>()!;
+  CustomTextStyles get textStyles => theme.extension<CustomTextStyles>()!;
+  KitColorsExtension get kitColors => theme.extension<KitColorsExtension>()!;
+  CustomShadows get shadows => theme.extension<CustomShadows>()!;
+  CustomBorderRadius get borderRadius => theme.extension<CustomBorderRadius>()!;
+  CustomDurations get durations => theme.extension<CustomDurations>()!;
+  CustomBreakpoints get breakpoints => theme.extension<CustomBreakpoints>()!;
 }

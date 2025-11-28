@@ -23,6 +23,9 @@ class AuthService {
   /// Throws exception if credentials are invalid
   Future<void> login(String email, String password) async {
     final user = await _authRepository.login(email, password);
+    if (user == null) {
+      throw Exception('Invalid credentials');
+    }
     currentUserNotifier.value = user;
     // TODO: Save token to SharedPreferences for persistence
   }

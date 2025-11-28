@@ -1,41 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/home/home_view.dart';
+import 'package:my_app/auth/views/login_view.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
+import 'package:my_app/dashboard/views/dashboard_view.dart';
+import 'package:my_app/employees/views/employee_list_view.dart';
+import 'package:my_app/employees/views/profile_view.dart';
 import 'package:my_app/not_found/not_found_view.dart';
+import 'package:my_app/schedule/views/schedule_view.dart';
 
 final routes = [
-  // Home (temporary, will be replaced by login)
+  // Home -> Redirect to Login
   RouteEntry(
     path: '/',
-    builder: (key, routeData) => const HomeView(),
+    builder: (key, routeData) => const LoginView(),
     requiresAuth: false,
   ),
   
   // Auth
   RouteEntry(
     path: '/login',
-    builder: (key, routeData) => const _PlaceholderView(title: 'Login'),
+    builder: (key, routeData) => const LoginView(),
     requiresAuth: false,
   ),
   
   // Dashboard - REQUIRES AUTH
   RouteEntry(
     path: '/dashboard',
-    builder: (key, routeData) => const _PlaceholderView(title: 'Dashboard'),
+    builder: (key, routeData) => DashboardView(
+      currentPath: '/dashboard',
+      child: const Center(child: Text('Dashboard Home')),
+    ),
     requiresAuth: true,
   ),
   
   // Employees - REQUIRES AUTH
   RouteEntry(
     path: '/dashboard/employees',
-    builder: (key, routeData) => const _PlaceholderView(title: 'Employees List'),
+    builder: (key, routeData) => DashboardView(
+      currentPath: '/dashboard/employees',
+      child: const EmployeeListView(),
+    ),
     requiresAuth: true,
   ),
   RouteEntry(
     path: '/dashboard/employees/:id',
     builder: (key, routeData) {
       final id = routeData.pathParameters['id'] ?? '';
-      return _PlaceholderView(title: 'Employee Profile', subtitle: 'ID: $id');
+      return DashboardView(
+        currentPath: '/dashboard/employees',
+        child: ProfileView(employeeId: id),
+      );
     },
     requiresAuth: true,
   ),
@@ -43,7 +56,10 @@ final routes = [
   // Schedule - REQUIRES AUTH
   RouteEntry(
     path: '/dashboard/schedule',
-    builder: (key, routeData) => const _PlaceholderView(title: 'Schedule'),
+    builder: (key, routeData) => DashboardView(
+      currentPath: '/dashboard/schedule',
+      child: const ScheduleView(),
+    ),
     requiresAuth: true,
   ),
   
