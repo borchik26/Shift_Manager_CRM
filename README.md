@@ -7,6 +7,7 @@ Flutter-приложение для управления сменами сотр
 Shift Manager CRM - это система управления сменами сотрудников, разработанная по архитектуре MVVM с использованием Repository Pattern. Проект включает mock API для разработки и тестирования без backend.
 
 ### Основные возможности MVP:
+
 - ✅ Аутентификация (логин/логаут)
 - ✅ Управление сотрудниками (CRUD)
 - ✅ Управление сменами (CRUD)
@@ -17,17 +18,20 @@ Shift Manager CRM - это система управления сменами с
 ## 🏗️ Архитектура
 
 ### MVVM + Repository Pattern
+
 ```
 View → ViewModel → Repository → Service
 ```
 
 **Правила:**
+
 - View общается только с ViewModel
 - ViewModel общается только с Repository
 - Repository общается с Service
 - ViewModel НИКОГДА не обращается к Service напрямую
 
 ### Структура проекта
+
 ```
 lib/
 ├── config/              # Конфигурация (routes, locator)
@@ -50,14 +54,16 @@ lib/
 ## 🚀 Быстрый старт
 
 ### Требования
+
 - Flutter SDK 3.24.5+
 - Dart 3.5.4+
 
 ### Установка
+
 ```bash
 # Клонировать репозиторий
-git clone <repository-url>
-cd CRM
+git clone https://github.com/borchik26/Shift_Manager_CRM.git
+cd Shift_Manager_CRM
 
 # Установить зависимости
 flutter pub get
@@ -67,9 +73,10 @@ flutter run
 ```
 
 ### Тестовые данные для входа
+
 ```
 Email: admin@example.com
-Password: admin123
+Password: password123
 ```
 
 ## 📦 Основные зависимости
@@ -92,6 +99,7 @@ intl: ^0.19.0
 ## 🎨 UI Компоненты
 
 ### Базовые компоненты (lib/core/ui/widgets/)
+
 - **AdaptiveCard** - Адаптивная карточка с max-width
 - **CustomButton** - Кнопка с loading state
 - **StatusBadge** - Цветные бейджи статусов
@@ -99,6 +107,7 @@ intl: ^0.19.0
 - **LoadingIndicator** - Индикатор загрузки
 
 ### Утилиты (lib/core/utils/)
+
 - **ResponsiveHelper** - Определение размера экрана
 - **Validators** - Валидация форм
 - **ErrorHandler** - Обработка ошибок
@@ -107,6 +116,7 @@ intl: ^0.19.0
 ## 📊 Data Layer
 
 ### Модели (lib/data/models/)
+
 ```dart
 // Employee
 class Employee {
@@ -140,12 +150,14 @@ class User {
 ```
 
 ### Mock API (lib/data/services/mock_api_service.dart)
+
 - 50 тестовых сотрудников
 - 20 тестовых смен
 - Задержка 800ms для имитации сети
 - Все CRUD операции
 
 ### Repositories (lib/data/repositories/)
+
 - **AuthRepository** - Аутентификация
 - **EmployeeRepository** - Управление сотрудниками
 - **ShiftRepository** - Управление сменами
@@ -153,6 +165,7 @@ class User {
 ## 🗺️ Навигация
 
 ### Роуты (lib/config/route_config.dart)
+
 ```dart
 /                          → StartupView
 /login                     → LoginView
@@ -165,6 +178,7 @@ class User {
 ## 🎯 Константы
 
 ### Статусы (lib/core/constants/app_constants.dart)
+
 ```dart
 // Employee Status
 enum EmployeeStatus { active, inactive, onLeave }
@@ -177,6 +191,7 @@ enum UserRole { admin, manager, employee }
 ```
 
 ### API Endpoints (lib/core/constants/api_endpoints.dart)
+
 ```dart
 class ApiEndpoints {
   static const String baseUrl = 'https://api.example.com';
@@ -190,6 +205,7 @@ class ApiEndpoints {
 ## 📅 Syncfusion Calendar Integration
 
 ### Адаптер (lib/schedule/models/shift_adapter.dart)
+
 ```dart
 // Конвертация Shift → Appointment
 final appointment = ShiftAdapter.toAppointment(shift, employee);
@@ -201,6 +217,7 @@ final dataSource = ShiftDataSource(shifts, employees);
 ## 🔧 Dependency Injection
 
 ### Locator (lib/config/locator_config.dart)
+
 ```dart
 void setupLocator() {
   // Services
@@ -217,6 +234,7 @@ void setupLocator() {
 ## 📱 Адаптивность
 
 ### Breakpoints (lib/core/ui/constants/breakpoints.dart)
+
 ```dart
 static const double mobile = 600;    // < 600px
 static const double tablet = 1024;   // 600-1024px
@@ -224,6 +242,7 @@ static const double desktop = 1024;  // > 1024px
 ```
 
 ### Использование
+
 ```dart
 final helper = ResponsiveHelper(context);
 
@@ -249,49 +268,58 @@ flutter test test/core/utils/locator_test.dart
 ## 📝 План разработки (14 дней)
 
 ### ✅ День 1-2: Подготовка (ЗАВЕРШЕНО)
-- [x] Анализ требований
-- [x] Настройка проекта
-- [x] Data Layer
-- [x] Базовые компоненты
+
+- [X] Анализ требований
+- [X] Настройка проекта
+- [X] Data Layer
+- [X] Базовые компоненты
 
 ### 🔄 День 3-4: Аутентификация (ТЕКУЩИЙ ЭТАП)
+
 - [ ] Login Screen
 - [ ] Auth ViewModel
 - [ ] Session Management
 
 ### 📋 День 5-7: Управление сотрудниками
+
 - [ ] Employee List
 - [ ] Employee Detail
 - [ ] Employee Form (Create/Edit)
 
 ### 📅 День 8-10: Календарь смен
+
 - [ ] Schedule View
 - [ ] Shift Form
 - [ ] Calendar Integration
 
 ### 🎨 День 11-12: UI/UX полировка
+
 - [ ] Адаптивность
 - [ ] Анимации
 - [ ] Error handling
 
 ### 🧪 День 13-14: Тестирование и деплой
+
 - [ ] Unit тесты
 - [ ] Integration тесты
 - [ ] Документация
 
 ## 📚 Документация
 
-- [Архитектура](.cursor/rules/architecture.mdc)
-- [Конвенции кода](.cursor/rules/conventions.mdc)
-- [План разработки](.cursor/rules/plan.mdc)
-- [API Contract](docs/api_contract.md)
+Архитектурные правила и документация по разработке находятся в локальной кодовой базе. Основные принципы:
+
+- **Архитектура**: MVVM + Repository Pattern
+- **State Management**: ValueNotifier для простых экранов, ChangeNotifier для сложных
+- **Dependency Injection**: GetIt (locator)
+- **Routing**: Custom Router на базе RouterDelegate
 
 ## 🤝 Вклад в проект
 
-1. Следуйте архитектурным правилам в `.cursor/rules/`
+1. Следуйте архитектурным правилам проекта (MVVM + Repository Pattern)
 2. Используйте snake_case для JSON ключей
-3. Все ViewModels используют ValueNotifier
-4. Никогда не обращайтесь к Service из ViewModel напрямую
+3. Все ViewModels используют ValueNotifier или ChangeNotifier
+4. Никогда не обращайтесь к Service из ViewModel напрямую - только через Repository
+5. Все async операции оборачивайте в AsyncValue для обработки состояний
 
 ## 📄 Лицензия
 
@@ -300,11 +328,16 @@ MIT License
 ## 👥 Команда
 
 - **Frontend**: Flutter Developer
-- **Backend**: Backend Developer (API Contract в docs/)
+- **Backend**: Backend Developer
 - **Design**: UI/UX Designer
+
+## 🔗 Ссылки
+
+- **Репозиторий**: [https://github.com/borchik26/Shift_Manager_CRM](https://github.com/borchik26/Shift_Manager_CRM)
+- **Issues**: [GitHub Issues](https://github.com/borchik26/Shift_Manager_CRM/issues)
 
 ---
 
 **Статус проекта**: 🟢 В разработке (MVP Phase)
 **Текущая версия**: 0.1.0
-**Последнее обновление**: 2025-11-28
+**Последнее обновление**: 2025-01-27
