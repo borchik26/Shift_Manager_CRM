@@ -15,35 +15,56 @@ class AppTheme {
 
     return baseTheme.copyWith(
       useMaterial3: true,
+      scaffoldBackgroundColor: isLight ? const Color(0xFFF5F7FA) : const Color(0xFF121212),
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF007AFF),
+        seedColor: const Color(0xFF0088CC), // Updated Blue
         brightness: brightness,
         background: isLight ? const Color(0xFFF5F7FA) : const Color(0xFF121212),
         surface: isLight ? Colors.white : const Color(0xFF1E1E1E),
+        primary: const Color(0xFF0088CC), // Explicit primary
       ),
-      textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme),
+      textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme).apply(
+        bodyColor: isLight ? const Color(0xFF333333) : Colors.white,
+        displayColor: isLight ? const Color(0xFF333333) : Colors.white,
+      ),
       cardTheme: CardThemeData(
-        elevation: 2,
+        elevation: 0, // Flat style
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16), // More rounded
         ),
         color: isLight ? Colors.white : const Color(0xFF1E1E1E),
+        margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(24), // Rounded search bar style
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: const BorderSide(color: Color(0xFF0088CC)),
         ),
         filled: true,
         fillColor: isLight ? Colors.white : const Color(0xFF2C2C2C),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF007AFF),
+          backgroundColor: const Color(0xFF0088CC),
           foregroundColor: Colors.white,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(24), // Rounded buttons
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
       ),
       extensions: [

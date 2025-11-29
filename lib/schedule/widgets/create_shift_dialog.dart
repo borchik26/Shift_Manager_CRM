@@ -129,6 +129,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
       final shift = Shift(
         id: const Uuid().v4(),
         employeeId: _selectedEmployeeId!,
+        location: _selectedBranch ?? 'Центр',
         startTime: startDateTime,
         endTime: endDateTime,
         status: 'scheduled',

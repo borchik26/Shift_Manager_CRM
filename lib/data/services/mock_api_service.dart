@@ -9,6 +9,23 @@ class MockApiService implements ApiService {
   // Simulated delay for realistic API behavior
   static const _delay = Duration(milliseconds: 800);
 
+  // Reference data constants (будут заменены на API calls в production)
+  static const List<String> _availableBranches = [
+    'ТЦ Мега',
+    'Центр',
+    'Аэропорт',
+  ];
+  static const List<String> _availableRoles = [
+    'Менеджер',
+    'Кассир',
+    'Администратор',
+    'Продавец-консультант',
+    'Старший продавец',
+    'Охранник',
+    'Уборщик',
+    'Товаровед',
+  ];
+
   // Mock data storage
   final List<Employee> _employees = [];
   final List<Shift> _shifts = [];
@@ -20,8 +37,8 @@ class MockApiService implements ApiService {
 
   void _initializeMockData() {
     // Generate 50 mock employees
-    final branches = ['Москва', 'Санкт-Петербург', 'Казань', 'Новосибирск'];
-    final positions = ['Менеджер', 'Администратор', 'Специалист', 'Директор'];
+    final branches = _availableBranches;
+    final positions = _availableRoles;
     final statuses = ['active', 'vacation', 'sick_leave'];
     final firstNames = [
       'Александр',
@@ -33,7 +50,7 @@ class MockApiService implements ApiService {
       'Сергей',
       'Алексей',
       'Артём',
-      'Владимир'
+      'Владимир',
     ];
     final lastNames = [
       'Иванов',
@@ -45,46 +62,86 @@ class MockApiService implements ApiService {
       'Васильев',
       'Соколов',
       'Михайлов',
-      'Новиков'
+      'Новиков',
     ];
 
     for (int i = 0; i < 50; i++) {
-      _employees.add(Employee(
-        id: 'emp_${i + 1}',
-        firstName: firstNames[i % firstNames.length],
-        lastName: lastNames[i % lastNames.length],
-        position: positions[i % positions.length],
-        branch: branches[i % branches.length],
-        status: statuses[i % statuses.length],
-        hireDate: DateTime.now().subtract(Duration(days: 365 * (i % 5))),
-        email: 'employee${i + 1}@company.com',
-        phone: '+7 (900) ${100 + i}-${10 + i}-${20 + i}',
-        avatarUrl: 'https://i.pravatar.cc/150?u=emp_${i + 1}',
-      ));
-    }
-
-    // Generate 20 mock shifts
-    final now = DateTime.now();
-    for (int i = 0; i < 20; i++) {
-      final startDate = now.add(Duration(days: i % 7));
-      final startTime = DateTime(
-        startDate.year,
-        startDate.month,
-        startDate.day,
-        9 + (i % 3) * 4,
+      _employees.add(
+        Employee(
+          id: 'emp_${i + 1}',
+          firstName: firstNames[i % firstNames.length],
+          lastName: lastNames[i % lastNames.length],
+          position: positions[i % positions.length],
+          branch: branches[i % branches.length],
+          status: statuses[i % statuses.length],
+          hireDate: DateTime.now().subtract(Duration(days: 365 * (i % 5))),
+          email: 'employee${i + 1}@company.com',
+          phone: '+7 (900) ${100 + i}-${10 + i}-${20 + i}',
+          avatarUrl: 'https://i.pravatar.cc/150?u=emp_${i + 1}',
+        ),
       );
-      final endTime = startTime.add(Duration(hours: 8));
-
-      _shifts.add(Shift(
-        id: 'shift_${i + 1}',
-        employeeId: _employees[i % _employees.length].id,
-        startTime: startTime,
-        endTime: endTime,
-        status: i % 5 == 0 ? 'pending' : 'confirmed',
-        isNightShift: startTime.hour >= 20 || startTime.hour < 6,
-        notes: i % 3 == 0 ? 'Важная смена' : null,
-      ));
     }
+
+    // Generate shifts for each employee (20-30 shifts per employee for last month)
+    final now = DateTime.now();
+    int shiftCounter = 0;
+
+    for (var employee in _employees) {
+      // Generate 30-50 shifts for each employee
+      final shiftsCount = 30 + (employee.id.hashCode.abs() % 21);
+
+      for (int i = 0; i < shiftsCount; i++) {
+        // Distribute shifts over the last month
+        final daysAgo = shiftsCount - i;
+        final shiftDate = now.subtract(Duration(days: daysAgo));
+
+        // Different start times (morning/day/evening/night)
+        final startHour = _getShiftStartHour(employee.id, i);
+        final startTime = DateTime(
+          shiftDate.year,
+          shiftDate.month,
+          shiftDate.day,
+          startHour,
+          0,
+        );
+
+        // Different durations (6-12 hours)
+        final duration = _getShiftDuration(employee.id, i);
+        final endTime = startTime.add(Duration(hours: duration));
+
+        // Different locations
+        final location =
+            _availableBranches[(employee.id.hashCode.abs() + i) % _availableBranches.length];
+
+        shiftCounter++;
+        _shifts.add(
+          Shift(
+            id: 'shift_$shiftCounter',
+            employeeId: employee.id,
+            location: location,
+            startTime: startTime,
+            endTime: endTime,
+            status: i % 10 == 0 ? 'pending' : 'confirmed',
+            isNightShift: startHour >= 20 || startHour < 6,
+            notes: i % 15 == 0 ? 'Важная смена' : null,
+          ),
+        );
+      }
+    }
+  }
+
+  // Helper method to get varied shift start hours
+  int _getShiftStartHour(String employeeId, int shiftIndex) {
+    final patterns = [9, 12, 14, 18, 20, 22]; // Morning, day, evening, night
+    final hash = (employeeId.hashCode.abs() + shiftIndex) % patterns.length;
+    return patterns[hash];
+  }
+
+  // Helper method to get varied shift durations
+  int _getShiftDuration(String employeeId, int shiftIndex) {
+    final durations = [6, 8, 10, 12]; // 6-12 hours
+    final hash = (employeeId.hashCode.abs() + shiftIndex * 2) % durations.length;
+    return durations[hash];
   }
 
   @override
@@ -151,9 +208,12 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<List<Shift>> getShifts({DateTime? startDate, DateTime? endDate}) async {
+  Future<List<Shift>> getShifts({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     await Future.delayed(_delay);
-    
+
     if (startDate == null && endDate == null) {
       return List.unmodifiable(_shifts);
     }
@@ -206,5 +266,17 @@ class MockApiService implements ApiService {
   Future<void> deleteShift(String id) async {
     await Future.delayed(_delay);
     _shifts.removeWhere((s) => s.id == id);
+  }
+
+  @override
+  Future<List<String>> getAvailableBranches() async {
+    await Future.delayed(_delay);
+    return List.from(_availableBranches);
+  }
+
+  @override
+  Future<List<String>> getAvailableRoles() async {
+    await Future.delayed(_delay);
+    return List.from(_availableRoles);
   }
 }

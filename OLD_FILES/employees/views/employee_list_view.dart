@@ -4,8 +4,8 @@ import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
-import 'package:my_app/employees/models/employee_list_model.dart';
-import 'package:my_app/employees/viewmodels/employee_list_view_model.dart';
+import '../models/employee_list_model.dart';
+import '../viewmodels/employee_list_view_model.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 
 class EmployeeListView extends StatefulWidget {
@@ -48,7 +48,8 @@ class _EmployeeListViewState extends State<EmployeeListView> {
         type: PlutoColumnType.text(),
         width: 250,
         renderer: (rendererContext) {
-          final avatarUrl = rendererContext.row.cells['avatar']?.value as String?;
+          final avatarUrl =
+              rendererContext.row.cells['avatar']?.value as String?;
           final name = rendererContext.cell.value as String;
           final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
           return Row(
@@ -106,7 +107,7 @@ class _EmployeeListViewState extends State<EmployeeListView> {
         field: 'hours',
         type: PlutoColumnType.number(),
         width: 100,
-        formatter: (value) => '${value} ч',
+        formatter: (value) => '$value ч',
       ),
       PlutoColumn(
         title: 'Действия',
@@ -120,7 +121,9 @@ class _EmployeeListViewState extends State<EmployeeListView> {
             icon: const Icon(Icons.visibility_outlined),
             onPressed: () {
               final id = rendererContext.row.cells['id']?.value as String;
-              locator<RouterService>().goTo(Path(name: '/dashboard/employees/$id'));
+              locator<RouterService>().goTo(
+                Path(name: '/dashboard/employees/$id'),
+              );
             },
           );
         },
@@ -164,7 +167,7 @@ class _EmployeeListViewState extends State<EmployeeListView> {
               }
 
               final employees = state.dataOrNull ?? [];
-              
+
               return PlutoGrid(
                 columns: _columns,
                 rows: _viewModel.getPlutoRows(employees),

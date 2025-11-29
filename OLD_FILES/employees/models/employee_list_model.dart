@@ -52,7 +52,7 @@ class EmployeeListModel {
     // Mock status logic based on ID for demo purposes
     final statusIndex = employee.id.hashCode % 3;
     final status = EmployeeStatus.values[statusIndex];
-    
+
     // Mock hours based on ID
     final hours = (employee.id.hashCode % 40) + 120.0;
 

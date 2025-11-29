@@ -5,14 +5,13 @@ import 'package:syncfusion_flutter_core/core.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Register Syncfusion license (7-Day Trial License)
+
   SyncfusionLicense.registerLicense(
-    'Ngo9BigBOggjHTQxAR8/V1JFaF1cXGFCf1FpQHxbf1x1ZFxMYF9bQXBPMyBoS35Rc0RiW3deeXRWQ2ZUWEV2VEFc'
+    'Ngo9BigBOggjHTQxAR8/V1JFaF1cXGFCf1FpQHxbf1x1ZFxMYF9bQXBPMyBoS35Rc0RiW3deeXRWQ2ZUWEV2VEFc',
   );
-  
+
   configureUrlStrategy();
-  
+
   // Global error handling
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);

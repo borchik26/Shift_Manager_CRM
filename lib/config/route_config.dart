@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:my_app/auth/views/login_view.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/dashboard/views/dashboard_view.dart';
-import 'package:my_app/employees/views/employee_list_view.dart';
-import 'package:my_app/employees/views/profile_view.dart';
+import 'package:my_app/employees_syncfusion/views/profile_view.dart';
+import 'package:my_app/employees_syncfusion/views/employee_syncfusion_view.dart';
 import 'package:my_app/not_found/not_found_view.dart';
 import 'package:my_app/schedule/views/schedule_view.dart';
 
@@ -37,7 +37,7 @@ final routes = [
     path: '/dashboard/employees',
     builder: (key, routeData) => DashboardView(
       currentPath: '/dashboard/employees',
-      child: const EmployeeListView(),
+      child: const EmployeeSyncfusionView(),
     ),
     requiresAuth: true,
   ),

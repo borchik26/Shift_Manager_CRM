@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
-import 'package:my_app/employees/models/employee_list_model.dart';
+import '../models/employee_list_model.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
@@ -9,18 +9,20 @@ import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 
 class EmployeeListViewModel extends ChangeNotifier {
   final EmployeeRepository _employeeRepository;
-  
+
   List<EmployeeListModel> _employees = [];
   String? _searchQuery;
   String? _branchFilter;
   EmployeeStatus? _statusFilter;
 
   EmployeeListViewModel({required EmployeeRepository employeeRepository})
-      : _employeeRepository = employeeRepository {
+    : _employeeRepository = employeeRepository {
     _loadEmployees();
   }
 
-  final state = ValueNotifier<AsyncValue<List<EmployeeListModel>>>(const AsyncLoading());
+  final state = ValueNotifier<AsyncValue<List<EmployeeListModel>>>(
+    const AsyncLoading(),
+  );
 
   Future<void> _loadEmployees() async {
     state.value = const AsyncLoading();
@@ -31,7 +33,9 @@ class EmployeeListViewModel extends ChangeNotifier {
     } catch (e, s) {
       state.value = AsyncError(e.toString(), e, s);
       locator<NotifyService>().setToastEvent(
-        ToastEventError(message: 'Ошибка загрузки сотрудников: ${e.toString()}'),
+        ToastEventError(
+          message: 'Ошибка загрузки сотрудников: ${e.toString()}',
+        ),
       );
     }
   }
@@ -40,9 +44,11 @@ class EmployeeListViewModel extends ChangeNotifier {
     var filtered = _employees;
 
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      filtered = filtered.where((e) => 
-        e.name.toLowerCase().contains(_searchQuery!.toLowerCase())
-      ).toList();
+      filtered = filtered
+          .where(
+            (e) => e.name.toLowerCase().contains(_searchQuery!.toLowerCase()),
+          )
+          .toList();
     }
 
     if (_branchFilter != null) {

@@ -55,11 +55,12 @@ dependencies:
   intl: ^0.19.0
 
   # UI Components - Tables
-  pluto_grid: ^8.0.0
+  # pluto_grid: ^8.0.0
 
   # UI Components - Calendar (patched locally for Flutter 3.24 SelectionDetails conflict)
   syncfusion_flutter_calendar: ^27.2.5
   syncfusion_flutter_core: ^27.2.5
+  syncfusion_flutter_datagrid: ^27.2.5
 
 dependency_overrides:
   syncfusion_flutter_calendar:

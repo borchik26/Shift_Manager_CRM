@@ -31,12 +31,10 @@ class ShiftModel {
   }
 
   factory ShiftModel.fromShift(Shift shift) {
-    // Mock role and location based on shift data or random
+    // Mock role based on shift data or random
     final roles = ['Администратор', 'Повар', 'Официант', 'Бармен'];
-    final locations = ['ТЦ Мега', 'Центр', 'Аэропорт'];
     
-    final roleIndex = shift.id.hashCode % roles.length;
-    final locationIndex = shift.id.hashCode % locations.length;
+    final roleIndex = shift.id.hashCode.abs() % roles.length;
     
     // Color based on role
     final colors = [
@@ -52,7 +50,7 @@ class ShiftModel {
       startTime: shift.startTime,
       endTime: shift.endTime,
       roleTitle: roles[roleIndex],
-      location: locations[locationIndex],
+      location: shift.location, // Use real location from Shift
       color: colors[roleIndex],
     );
   }

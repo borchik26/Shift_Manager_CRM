@@ -7,7 +7,7 @@ class EmployeeRepository {
   final ApiService _apiService;
 
   EmployeeRepository({required ApiService apiService})
-      : _apiService = apiService;
+    : _apiService = apiService;
 
   Future<List<Employee>> getEmployees() {
     return _apiService.getEmployees();
@@ -27,5 +27,13 @@ class EmployeeRepository {
 
   Future<void> deleteEmployee(String id) {
     return _apiService.deleteEmployee(id);
+  }
+
+  Future<List<String>> getAvailableBranches() {
+    return _apiService.getAvailableBranches();
+  }
+
+  Future<List<String>> getAvailableRoles() {
+    return _apiService.getAvailableRoles();
   }
 }

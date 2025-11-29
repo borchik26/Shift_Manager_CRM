@@ -23,4 +23,8 @@ abstract class ApiService {
   Future<Shift> createShift(Shift shift);
   Future<Shift> updateShift(Shift shift);
   Future<void> deleteShift(String id);
+
+  // Filter options / Reference data
+  Future<List<String>> getAvailableBranches();
+  Future<List<String>> getAvailableRoles();
 }
