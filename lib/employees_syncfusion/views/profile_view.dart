@@ -50,7 +50,6 @@ class _ProfileViewState extends State<ProfileView> {
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF0088CC),
           surface: Color(0xFF1E1E1E),
-          background: Color(0xFF111111),
         ),
       ),
       child: Scaffold(
@@ -74,7 +73,7 @@ class _ProfileViewState extends State<ProfileView> {
             return LayoutBuilder(
               builder: (context, constraints) {
                 final isDesktop = constraints.maxWidth > 900;
-                
+
                 if (isDesktop) {
                   return SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
@@ -282,7 +281,7 @@ class _ProfileViewState extends State<ProfileView> {
             barRadius: const Radius.circular(6),
             animation: true,
             center: Text(
-              '${(profile.hoursPercent * 100).toInt()}%',
+              '${(profile.actualHoursPercent * 100).toInt()}%',
               style: const TextStyle(fontSize: 9, color: Colors.white),
             ),
           ),
@@ -332,7 +331,7 @@ class _ProfileViewState extends State<ProfileView> {
                         width: 24,
                         color: shift.isWarning
                             ? Colors.orange
-                            : _getEmployeeColor(profile.id),
+                            : _getLocationColor(shift.location),
                         padding: const EdgeInsets.only(right: 12),
                       ),
                       beforeLineStyle: LineStyle(
@@ -368,7 +367,7 @@ class _ProfileViewState extends State<ProfileView> {
           ),
           const SizedBox(height: 4),
           Text(
-            '$locationIcon ${shift.timeRange} (${shift.durationHours.toInt()}ч) • ${shift.location}',
+            '${shift.shiftType.icon} ${shift.timeRange} (${shift.durationHours.toInt()}ч) [${shift.shiftType.displayName}] • $locationIcon ${shift.location}',
             style: const TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 14,
@@ -390,20 +389,12 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  // Get unique color for each employee based on their ID
-  Color _getEmployeeColor(String employeeId) {
-    final colors = [
-      const Color(0xFF0088CC), // Blue
-      const Color(0xFF00C853), // Green
-      const Color(0xFFFF6B35), // Orange
-      const Color(0xFF9C27B0), // Purple
-      const Color(0xFFE91E63), // Pink
-      const Color(0xFF00BCD4), // Cyan
-      const Color(0xFFFF9800), // Amber
-      const Color(0xFF4CAF50), // Light Green
-    ];
-    final hash = employeeId.hashCode.abs() % colors.length;
-    return colors[hash];
+  // Get color for each location
+  Color _getLocationColor(String location) {
+    if (location.contains('ТЦ Мега')) return const Color(0xFFFF6B35); // Orange
+    if (location.contains('Центр')) return const Color(0xFF00BCD4); // Cyan
+    if (location.contains('Аэропорт')) return const Color(0xFF9C27B0); // Purple
+    return const Color(0xFF0088CC); // Blue default
   }
 
   // Get icon for each location
