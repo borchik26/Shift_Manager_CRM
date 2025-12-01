@@ -50,3 +50,6 @@ app.*.map.json
 # Cursor IDE rules and documentation
 .cursor/rules/
 docs/
+
+# Old files with potential secrets
+OLD_FILES/

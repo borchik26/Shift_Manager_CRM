@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(flutter analyze lib/employees_syncfusion/views/profile_view.dart --no-fatal-infos:*)",
+      "Bash(cat:*)",
+      "Bash(dart format:*)",
+      "Bash(flutter analyze:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "brave-search",
+    "tavily-search",
+    "@llmindset-mcp-miro"
+  ]
+}
