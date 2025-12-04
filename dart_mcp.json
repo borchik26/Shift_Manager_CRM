@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "dart": {
+            "command": "dart",
+            "args": [
+                "run",
+                "/Users/vladlyulin/.dart_tool/ai_mcp/pkgs/dart_mcp_server/bin/main.dart"
+            ]
+        }
+    }
+}
