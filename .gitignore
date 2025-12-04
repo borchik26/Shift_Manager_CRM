@@ -1,9 +1,42 @@
+# Исключить все по умолчанию
+/*
+
+# Включить нужные папки и файлы
+!/lib/
+!/lib/**
+!/test/
+!/test/**
+!/web/
+!/web/**
+!/android/
+!/android/**
+!/pubspec.yaml
+!/README.md
+
+# Стандартные исключения для Flutter (внутри включенных папок)
 build/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+*.DS_Store
+
+# IDE и редакторы
 .idea/
 .vscode/
-*.DS_Store
-OLD_FILES/
 .cursor/
+
+# Дополнительные папки для исключения
+OLD_FILES/
+.claude/
+.github/
+.kilocode/
+.mcp.json
+.roo/
+CLAUDE.md
+dart_mcp.json
+docs/
+ios/
+macos/
+pubspec.lock
+third_party/
+analysis_options.yaml
