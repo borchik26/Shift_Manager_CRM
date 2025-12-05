@@ -1,7 +1,7 @@
-# Документация разработчика: Shift Manager CRM
+# Документация проекта Shift Manager CRM
 
 ## 1. Обзор проекта
-**Shift Manager CRM** — это кроссплатформенное Flutter приложение для управления персоналом и планирования рабочих смен. Приложение позволяет менеджерам составлять графики, отслеживать конфликты в расписании, управлять базой сотрудников и просматривать аналитику.
+**Shift Manager CRM** — это кроссплатформенное приложение (Mobile & Web) на базе Flutter, предназначенное для управления графиками смен сотрудников, учета рабочего времени и администрирования персонала. Приложение использует адаптивный дизайн для предоставления оптимального пользовательского опыта как на мобильных устройствах, так и на десктопных браузерах.
 
 ### Основные возможности
 *   **Аутентификация:** Вход в систему (Mock-авторизация).
@@ -10,179 +10,138 @@
 *   **Валидация:** Автоматическая проверка конфликтов (наложения, переработки, недостаток отдыха).
 *   **База сотрудников:** Табличный просмотр, фильтрация, поиск, редактирование профилей.
 
----
 
-## 2. Технологический стек
-
-*   **Фреймворк:** Flutter (Dart SDK ^3.8.0).
-*   **Архитектура:** MVVM (Model-View-ViewModel) + Clean Architecture.
-*   **Управление состоянием:** Native `ValueNotifier` / `ChangeNotifier`.
-*   **Внедрение зависимостей (DI):** Кастомный Service Locator (`ModuleLocator`).
-*   **Навигация:** Кастомная реализация Navigator 2.0 (Router API).
+### Технологический стек
+*   **Фреймворк:** Flutter (Dart SDK ^3.8.0)
+*   **Архитектура:** MVVM (Model-View-ViewModel) + Clean Architecture (разделение на слои Data, Domain/Core, UI).
+*   **Управление состоянием:** `ValueNotifier`, `ChangeNotifier`, `Provider` (через `ListenableBuilder`).
+*   **Dependency Injection:** `get_it` (реализовано в `locator.dart`).
+*   **Навигация:** Кастомная реализация Router API 2.0 (`RouterService`, `BestRouterDelegate`).
 *   **UI Компоненты:**
-    *   `syncfusion_flutter_calendar` — для отображения графика.
-    *   `syncfusion_flutter_datagrid` — для таблиц сотрудников.
-    *   Material 3 Design.
-*   **Сеть:** Пакет `http` с кастомной абстракцией и интерцепторами.
+    *   `syncfusion_flutter_calendar` (Календарь смен).
+    *   `syncfusion_flutter_datagrid` (Таблицы сотрудников).
+    *   `syncfusion_flutter_charts` (Графики статистики).
 
 ---
 
-## 3. Архитектура приложения
+## 2. Архитектура и Структура проекта
 
-Проект следует принципам разделения ответственности. Поток данных однонаправленный.
+Проект следует строгой модульной структуре.
 
-```mermaid
-classDiagram
-    class View {
-        +build()
-        +listenToViewModel()
-    }
-    class ViewModel {
-        +State<AsyncValue>
-        +loadData()
-        +handleUserAction()
-    }
-    class Repository {
-        +getData()
-        +saveData()
-    }
-    class ApiService {
-        +fetch()
-        +post()
-    }
-    class Model {
-        +DataFields
-        +fromJson()
-    }
-
-    View --> ViewModel : User Actions
-    ViewModel ..> View : Notifies Changes
-    ViewModel --> Repository : Requests Data
-    Repository --> ApiService : API Calls
-    ApiService --> Model : Returns DTO
-    Repository --> Model : Returns Domain Model
-```
-[Edit in Mermaid Playground](https://www.mermaidchart.com/play#pako:eJx1U8FuAiEQ_RXCqU3UmPa2t63apE1sG7WevEyXUUnZxcJgY4z_XhC1KMplYebNe8NbZssrLZAXvFJgbV_CwkA9a5hf-wibSvxl2xgJa-a63YenLyeVuLu_DCtpCZuJDkVDz6uOkN0l5T6b844JCMP2sVfaTVNNQbl4HmRaGkQfCPIultAIhZ8WTVmR1M3VJka40laSNpu8iwXSdWYLa0wzZ4zlSo7RrGWFOeMcqVrmfL4Fusp1w56g_SxRCZsJGF2_2rO7xs3-_7Xb0cPE-oIFg1h0yP5jY7bTSQo89k2TnEu0rOfNXWCGPwkkthb-8OPQkmWh71iS5E81iXEFKz9eWA-UOkgkuRP-eIERkjONZ5-83ybPwLoG2cQwb_EajT8LXmw5LbEOkyDAfPNdi4MjPfZvkBdkHLa4Wwn_OA8jwos5KOujKILg8DBE4bP7A6oXBIs=)
+### Структура директорий
+*   **`lib/config/`**: Конфигурация приложения (маршруты `route_config.dart`, DI-модули `locator_config.dart`).
+*   **`lib/core/`**: Ядро приложения.
+    *   `services/`: Базовые сервисы (Auth, Navigation).
+    *   `ui/`: Темизация (`app_theme.dart`), общие виджеты.
+    *   `utils/`: Утилиты (HTTP клиенты, валидаторы, обработка ошибок).
+*   **`lib/data/`**: Слой данных.
+    *   `models/`: DTO (Data Transfer Objects) - `Employee`, `Shift`, `User`.
+    *   `repositories/`: Абстракция доступа к данным (`ShiftRepository`, `EmployeeRepository`).
+    *   `services/`: Реализация API (`MockApiService` для разработки).
+*   **`lib/features/` (модули):**
+    *   `auth/`: Авторизация.
+    *   `dashboard/`: Главный экран со сводкой.
+    *   `schedule/`: Управление расписанием (самый сложный модуль).
+    *   `employees_syncfusion/`: Управление списком сотрудников и профилями.
 
 
 
-### Слои приложения
-1.  **Presentation Layer (UI):**
-    *   **Views:** Экраны (`ScheduleView`, `DashboardView`). Пассивны, отображают данные из VM.
-    *   **Widgets:** Переиспользуемые компоненты (`ConflictWarningBox`, `SummaryBar`).
-2.  **Logic Layer (ViewModel):**
-    *   Управляют состоянием экрана.
-    *   Используют `AsyncValue` для обработки состояний загрузки/ошибки/данных.
-    *   Пример: `ScheduleViewModel`, `EmployeeSyncfusionViewModel`.
-3.  **Domain Layer (Repositories):**
-    *   Изолируют бизнес-логику от источников данных.
-    *   Пример: `ShiftRepository`, `EmployeeRepository`.
-4.  **Data Layer (Services & Models):**
-    *   `ApiService`: Абстракция для работы с сетью.
-    *   `MockApiService`: Генерация тестовых данных.
 
 ---
 
-## 4. Ключевые модули и функциональность
+## 3. Функциональные модули
 
-### 4.1. Модуль Расписания (`lib/schedule`)
-Центральная часть приложения.
+### 3.1. Дашборд (Dashboard)
+**Файл:** `lib/dashboard/views/home_view.dart`
 
-*   **Визуализация:** Использует `SfCalendar`. Поддерживает режимы просмотра: День, Неделя (Timeline), Месяц.
-*   **Drag & Drop:** Реализовано перетаскивание смен для изменения времени или назначения на другого сотрудника.
-*   **Фильтрация:**
-    *   По сотруднику, должности, филиалу.
-    *   Пресеты: "Мои смены", "С конфликтами", "Незаполненные".
-*   **Валидация (Conflict Checker):**
-    Класс `ShiftConflictChecker` (`lib/schedule/utils/shift_conflict_checker.dart`) проверяет:
-    *   `timeOverlap`: Наложение смен по времени.
-    *   `insufficientRest`: Отдых между сменами менее 8 часов.
-    *   `tooManyShiftsPerDay`: Более 2 смен в день.
-    *   `locationConflict`: Сотрудник в разных местах одновременно.
-    *   Разделяет конфликты на **Hard Errors** (блокируют сохранение) и **Warnings** (требуют подтверждения).
+Центральный хаб приложения. Реализует адаптивную верстку:
+*   **Desktop:** Использует `Row` и `Expanded` для отображения статистики, списка уведомлений и графиков в одну строку/сетку.
+*   **Mobile:** Использует `Column` для вертикального стека виджетов.
 
-### 4.2. Модуль Сотрудников (`lib/employees_syncfusion`)
-Управление базой персонала.
+**Ключевые компоненты:**
+*   **StatCard:** Карточки KPI (Сотрудников, Смен сегодня, Часов за неделю, Конфликтов).
+*   **AlertsListWidget:** Список предупреждений (например, "Недостает смен на пятницу", "Запросы на выходной").
+*   **SafeLoadingHoursChart:** График загрузки по часам (безопасные часы).
+*   **WeeklyCalendarWidget:** Мини-календарь текущей недели.
 
-*   **Таблица:** Использует `SfDataGrid` для отображения списка с колонками: Имя, Должность, Филиал, Статус, Отработано часов.
-*   **Источник данных:** `EmployeeDataSource` адаптирует модели для грида.
-*   **Функции:** Поиск, фильтрация, удаление, создание сотрудника.
+### 3.2. Управление расписанием (Schedule)
+**Файл:** `lib/schedule/views/schedule_view.dart`
 
-### 4.3. Модуль Дашборда (`lib/dashboard`)
-Стартовый экран с аналитикой.
+Это основной рабочий инструмент менеджера. Реализация кардинально отличается для Web и Mobile версий.
 
-*   **Статистика:** `DashboardStats` (всего сотрудников, смены сегодня, часы за неделю).
-*   **Алерты:** Уведомления о запросах на выходной или нехватке персонала на пятницу.
-*   **Дни рождения:** Список ближайших именинников.
+#### Web Версия (Desktop)
+Использует мощный компонент `SfCalendar` от Syncfusion.
+*   **Режимы просмотра:** День, Неделя, Месяц, Timeline.
+*   **Drag & Drop:** Поддерживается перетаскивание смен для изменения времени или переназначения сотрудника.
+*   **Ресурсы:** Слева отображаются сотрудники (Resources), по горизонтали — время.
+*   **Контекстное меню:** ПКМ по смене открывает меню (Изменить, Копировать, Удалить).
 
-### 4.4. Навигация (`lib/core/utils/navigation`)
-В проекте реализована собственная система навигации на базе **Navigator 2.0**, без использования сторонних пакетов (как go_router).
+#### Mobile Версия
+Использует кастомный `MobileScheduleGridView`.
+*   **Layout:** Кастомная сетка, где строки — это профессии (или "Свободные смены"), а столбцы — дни недели.
+*   **ShiftCard:** Компактные карточки смен внутри ячеек.
+*   **Жесты:** Tap для редактирования. Zoom отключен для стабильности скролла.
+*   **Фильтры:** Вынесены в BottomSheet (`_showMobileFiltersSheet`).
 
-*   **`RouterService`:** ViewModel для навигации. Хранит стек страниц (`_navigationStack`). Методы: `goTo`, `replace`, `back`.
-*   **`AppRouterDelegate`:** Отвечает за построение стека страниц Flutter на основе данных из `RouterService`.
-*   **`RouteConfig`:** Определяет карту маршрутов и права доступа (`requiresAuth`).
+#### Логика (ViewModel)
+**Файл:** `lib/schedule/viewmodels/schedule_view_model.dart`
+*   **Conflict Checker:** При создании или изменении смены запускается `ShiftConflictChecker`. Он проверяет:
+    *   Пересечение смен одного сотрудника.
+    *   *Hard Errors:* Блокируют сохранение.
+    *   *Warnings:* Показывают предупреждение (Toast), но разрешают сохранение.
+*   **Фильтрация:** Поддерживается сложная фильтрация по: Поиску, Филиалу, Должности, Сотруднику, Дате, Статусу (конфликты/предупреждения).
 
----
+### 3.3. Сотрудники (Employees)
+**Файл:** `lib/employees_syncfusion/views/employee_syncfusion_view.dart`
 
-## 5. Работа с данными (Data Layer)
+#### Web Версия
+*   **SfDataGrid:** Полнофункциональная таблица с сортировкой.
+*   **Колонки:** Сотрудник, Должность, Филиал, Статус, Отработано часов, Действия.
 
-### 5.1. Mock API Service
-В текущей версии используется `MockApiService` (`lib/data/services/mock_api_service.dart`), который эмулирует бэкенд.
+#### Mobile Версия
+*   **ListView:** Список карточек (`Card`).
+*   **Информация:** Аватар, Имя, Должность, Чипсы с филиалом и часами.
+*   **Действия:** PopupMenuButton для перехода к истории или удаления.
 
-*   **Генерация данных:** При старте генерирует ~50 сотрудников с реалистичными именами и аватарами (через сервис ui-avatars.com).
-*   **Генерация смен:** Создает расписание на текущий месяц, учитывая должности и правила непересечения.
-*   **Задержка:** Имитирует сетевую задержку (`Future.delayed`) для проверки UI лоадеров.
-
-### 5.2. Dependency Injection
-Используется кастомный Service Locator в файле `lib/core/utils/locator.dart`.
-Регистрация модулей происходит в `lib/config/locator_config.dart`:
-
-```dart
-final modules = [
-  Module<RouterService>(builder: () => RouterService(...), lazy: false),
-  Module<AuthRepository>(builder: () => AuthRepository(...), lazy: true),
-  // ... другие сервисы
-];
-```
-
----
-
-## 6. Инструкция по запуску и разработке
-
-### Требования
-*   Flutter SDK: `^3.8.0`
-*   Dart SDK: Совместимый с Flutter 3.8+
-
-### Установка
-1.  Клонировать репозиторий.
-2.  Выполнить `flutter pub get`.
-3.  Запустить проект `flutter run`.
-
-### Учетные данные для входа (Mock)
-*   **Email:** `admin@example.com`
-*   **Пароль:** `password123`
-
-### Структура папок
-```text
-lib/
-├── auth/           # Экран логина и VM
-├── config/         # Конфигурация роутинга и DI
-├── core/           # Базовые утилиты (UI кит, навигация, DI, ошибки)
-├── dashboard/      # Экран дашборда
-├── data/           # Репозитории, модели, API сервисы
-├── employees_syncfusion/ # Экран списка сотрудников
-├── schedule/       # Экран календаря и логика смен
-├── startup/        # Логика инициализации приложения
-└── main.dart       # Точка входа
-```
+#### Профиль сотрудника
+**Файл:** `lib/employees_syncfusion/views/profile_view.dart`
+Детальная страница с аналитикой по конкретному сотруднику:
+*   Расчет зарплаты (ставка * часы).
+*   График "Учет времени" (`LinearPercentIndicator`).
+*   История смен (Timeline).
+*   Статистика по локациям (где чаще работает).
 
 ---
 
-## 7. Известные ограничения и TODO
-1.  **Хранение данных:** Все данные хранятся в оперативной памяти (`MockApiService`). При перезапуске приложения изменения теряются.
-2.  **Локализация:** Подключен пакет `intl`, инициализирована русская локаль, но строки в коде в основном захардкожены на русском языке.
-3.  **Тесты:** В структуре есть папка `test`, но в предоставленном контексте примеры тестов отсутствуют. Рекомендуется покрытие Unit-тестами `ShiftConflictChecker`.
+## 4. Технические особенности реализации
 
+### 4.1. Адаптивность (Responsive Design)
+Используется класс-хелпер `ResponsiveHelper` (`lib/core/utils/responsive_helper.dart`).
+*   **Breakpoints:**
+    *   Mobile: < 600px
+    *   Tablet: 600px - 1200px
+    *   Desktop: > 1200px
+*   В коде часто встречается проверка `ResponsiveHelper.isMobile(context)` для рендеринга совершенно разных виджетов (например, `SfDataGrid` vs `ListView`).
+
+### 4.2. Навигация
+Используется Router API 2.0.
+*   **Конфигурация:** `lib/config/route_config.dart` определяет список `RouteEntry`.
+*   **Защита маршрутов:** Поле `requiresAuth: true` автоматически перенаправляет неавторизованных пользователей на `/login` (логика в `AppRouterDelegate`).
+*   **Web URL:** Поддерживается чистый URL без хеша (`#`) благодаря `UrlStrategy`.
+
+### 4.3. Работа с данными (Mock API)
+На данный момент приложение работает на моковых данных (`MockApiService`), которые генерируются динамически при старте:
+*   Генерируется 50 сотрудников с реалистичными русскими именами.
+*   Генерируются смены на текущий месяц с учетом логики (не пересекающиеся смены).
+*   Имитируется задержка сети (`Future.delayed`) для проверки UI состояний загрузки (`AsyncValue`).
+
+### 4.4. Обработка ошибок
+Централизованный класс `ErrorHandler` (`lib/core/utils/error_handler.dart`).
+*   Перехватывает исключения.
+*   Преобразует технические ошибки в понятные пользователю сообщения ("Network error", "Unauthorized").
+*   Показывает Toast-уведомления через `NotifyService`.
+
+---
 
 
 
