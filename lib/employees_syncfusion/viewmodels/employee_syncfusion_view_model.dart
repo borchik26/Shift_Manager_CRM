@@ -35,14 +35,16 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   EmployeeSyncfusionViewModel({
     required EmployeeRepository employeeRepository,
     required ShiftRepository shiftRepository,
+    required BuildContext context,
   })  : _employeeRepository = employeeRepository,
         _shiftRepository = shiftRepository {
     // Initialize data source once with a wrapper for the callback
     _dataSource = EmployeeDataSource(
       employees: [],
       onDeleteEmployee: (id) => _onDeleteEmployee?.call(id),
+      context: context,
     );
-    
+
     // Load data
     _loadEmployees();
     _loadFilterOptions();

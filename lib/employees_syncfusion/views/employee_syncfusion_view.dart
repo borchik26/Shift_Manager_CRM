@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:my_app/core/utils/locator.dart';
+import 'package:my_app/core/utils/responsive_helper.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/employees_syncfusion/viewmodels/employee_syncfusion_view_model.dart';
 import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dart';
 import 'package:my_app/employees_syncfusion/widgets/create_employee_dialog.dart';
+import 'package:my_app/employees_syncfusion/widgets/employee_filters_dialog.dart';
 
 class EmployeeSyncfusionView extends StatefulWidget {
   const EmployeeSyncfusionView({super.key});
@@ -28,6 +30,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
     _viewModel = EmployeeSyncfusionViewModel(
       employeeRepository: locator<EmployeeRepository>(),
       shiftRepository: locator<ShiftRepository>(),
+      context: context,
     );
     _viewModel.setDeleteCallback(_onDeleteEmployee);
   }
@@ -111,29 +114,61 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Сотрудники',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                ElevatedButton(
-                  onPressed: _showCreateEmployeeDialog,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
+            // Header - адаптивный
+            ResponsiveHelper.isMobile(context)
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Сотрудники',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _showCreateEmployeeDialog,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: const Text(
+                            'Добавить сотрудника',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Сотрудники',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      ElevatedButton(
+                        onPressed: _showCreateEmployeeDialog,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                        ),
+                        child: const Text('Добавить сотрудника'),
+                      ),
+                    ],
                   ),
-                  child: const Text('Добавить сотрудника'),
-                ),
-              ],
-            ),
             const SizedBox(height: 24),
 
             // Filters and Search
@@ -146,53 +181,78 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
                 ),
                 child: Column(
                   children: [
-                    // Filters Row
+                    // Filters Row - адаптивный
                     AnimatedBuilder(
                       animation: _viewModel,
                       builder: (context, _) {
+                        final isMobile = ResponsiveHelper.isMobile(context);
+
                         return Row(
                           children: [
-                            _buildBranchDropdown(),
-                            const SizedBox(width: 12),
-                            _buildRoleDropdown(),
-                            const SizedBox(width: 12),
-                            _buildStatusDropdown(),
-                            const SizedBox(width: 12),
-                            // Кнопка сброса фильтров
-                            if (_selectedBranch != null ||
-                                _selectedRole != null ||
-                                _selectedStatus != null ||
-                                _searchController.text.isNotEmpty)
-                              TextButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedBranch = null;
-                                    _selectedRole = null;
-                                    _selectedStatus = null;
-                                    _searchController.clear();
-                                  });
-                                  _viewModel.clearFilters();
-                                },
-                                icon: const Icon(Icons.clear, size: 18),
-                                label: const Text('Сбросить'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.red.shade700,
+                            if (isMobile)
+                              // Mobile: кнопка фильтров
+                              OutlinedButton.icon(
+                                onPressed: _showFiltersDialog,
+                                icon: const Icon(Icons.filter_list, size: 18),
+                                label: const Text(
+                                  'Фильтры',
+                                  style: TextStyle(fontSize: 13),
                                 ),
-                              ),
-                            const Spacer(),
-                            // Search
-                            Container(
-                              width: 300,
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                              )
+                            else
+                              // Desktop: все фильтры
+                              ...[
+                                _buildBranchDropdown(),
+                                const SizedBox(width: 12),
+                                _buildRoleDropdown(),
+                                const SizedBox(width: 12),
+                                _buildStatusDropdown(),
+                                const SizedBox(width: 12),
+                                if (_selectedBranch != null ||
+                                    _selectedRole != null ||
+                                    _selectedStatus != null ||
+                                    _searchController.text.isNotEmpty)
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedBranch = null;
+                                        _selectedRole = null;
+                                        _selectedStatus = null;
+                                        _searchController.clear();
+                                      });
+                                      _viewModel.clearFilters();
+                                    },
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    label: const Text('Сбросить'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red.shade700,
+                                    ),
+                                  ),
+                              ],
+                            const SizedBox(width: 8),
+                            // Search - адаптивный
+                            Expanded(
+                              child: Container(
+                                width: isMobile ? null : 300,
+                                height: 40,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
                               child: TextField(
                                 controller: _searchController,
                                 decoration: InputDecoration(
@@ -220,6 +280,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
                                   setState(() {});
                                 },
                               ),
+                            ),
                             ),
                           ],
                         );
@@ -264,12 +325,14 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
                               source: _viewModel.dataSource,
                               columns: _buildColumns(),
                               columnWidthMode: ColumnWidthMode.fill,
-                              rowHeight: 72,
-                              headerRowHeight: 56,
+                              rowHeight: ResponsiveHelper.isMobile(context) ? 60 : 72,
+                              headerRowHeight: ResponsiveHelper.isMobile(context) ? 48 : 56,
                               allowSorting: true,
                               gridLinesVisibility: GridLinesVisibility.none,
                               headerGridLinesVisibility:
                                   GridLinesVisibility.none,
+                              horizontalScrollPhysics:
+                                  const AlwaysScrollableScrollPhysics(),
                             ),
                           );
                         },
@@ -283,6 +346,40 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
         ),
       ),
     );
+  }
+
+  Future<void> _showFiltersDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => EmployeeFiltersDialog(
+        initialBranch: _selectedBranch,
+        initialRole: _selectedRole,
+        initialStatus: _selectedStatus,
+        availableBranches: _viewModel.availableBranches,
+        availableRoles: _viewModel.availableRoles,
+      ),
+    );
+
+    if (result != null && mounted) {
+      if (result['reset'] == true) {
+        setState(() {
+          _selectedBranch = null;
+          _selectedRole = null;
+          _selectedStatus = null;
+          _searchController.clear();
+        });
+        _viewModel.clearFilters();
+      } else {
+        setState(() {
+          _selectedBranch = result['branch'];
+          _selectedRole = result['role'];
+          _selectedStatus = result['status'];
+        });
+        _viewModel.filterByBranch(_selectedBranch);
+        _viewModel.filterByRole(_selectedRole);
+        _viewModel.filterByStatus(_selectedStatus);
+      }
+    }
   }
 
   Widget _buildBranchDropdown() {
@@ -419,6 +516,8 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
   }
 
   List<GridColumn> _buildColumns() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+
     return [
       // ID (скрытая колонка)
       GridColumn(columnName: 'id', label: Container(), visible: false),
@@ -427,27 +526,28 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
       GridColumn(
         columnName: 'name',
         label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
-            '«Сотрудник»',
+          child: Text(
+            'Сотрудник',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: isMobile ? 13 : 14,
               color: Colors.black87,
             ),
           ),
         ),
       ),
 
-      // Role
+      // Role - СКРЫТЬ на mobile
       GridColumn(
         columnName: 'role',
+        visible: !isMobile,
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
           child: const Text(
-            '«Должность»',
+            'Должность',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
@@ -457,14 +557,15 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
         ),
       ),
 
-      // Branch
+      // Branch - СКРЫТЬ на mobile
       GridColumn(
         columnName: 'branch',
+        visible: !isMobile,
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
           child: const Text(
-            '«Филиал»',
+            'Филиал',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
@@ -478,13 +579,13 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
       GridColumn(
         columnName: 'status',
         label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
-            '«Статус смены»',
+          child: Text(
+            isMobile ? 'Смена' : 'Статус смены',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: isMobile ? 13 : 14,
               color: Colors.black87,
             ),
           ),
@@ -492,14 +593,15 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
         allowSorting: false,
       ),
 
-      // Hours
+      // Hours - СКРЫТЬ на mobile
       GridColumn(
         columnName: 'hours',
+        visible: !isMobile,
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
           child: const Text(
-            '«Отработано часов»',
+            'Отработано часов',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
@@ -513,7 +615,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
       GridColumn(
         columnName: 'actions',
         label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16),
           alignment: Alignment.center,
           child: const Text(
             '',

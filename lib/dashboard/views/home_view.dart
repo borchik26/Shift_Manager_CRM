@@ -73,11 +73,36 @@ class _HomeViewState extends State<HomeView> {
     final dateFormat = DateFormat('d MMMM, EEEE', 'ru');
     final formattedDate = dateFormat.format(now);
     final authService = locator<AuthService>();
+    final isMobile = MediaQuery.of(context).size.width <= 600;
 
     return ValueListenableBuilder(
       valueListenable: authService.currentUserNotifier,
       builder: (context, user, _) {
         final userName = user?.username ?? 'Admin';
+
+        // Mobile: Column layout
+        if (isMobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Добрый день, $userName!',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Сегодня: $formattedDate',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+              ),
+            ],
+          );
+        }
+
+        // Desktop: Row layout
         return Row(
           children: [
             Text(
@@ -100,6 +125,8 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildStatsRow(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 600;
+
     return ValueListenableBuilder<AsyncValue<DashboardStats>>(
       valueListenable: _viewModel.statsState,
       builder: (context, asyncStats, _) {
@@ -109,43 +136,66 @@ class _HomeViewState extends State<HomeView> {
             child: Center(child: CircularProgressIndicator()),
           ),
           data: (stats) {
+            final cards = [
+              StatCard(
+                title: 'Сотрудников',
+                value: '${stats.totalEmployees}',
+                icon: Icons.people,
+                color: Colors.blue,
+              ),
+              StatCard(
+                title: 'Смен сегодня',
+                value: '${stats.todayShifts}',
+                icon: Icons.calendar_today,
+                color: Colors.green,
+              ),
+              StatCard(
+                title: 'Часов за неделю',
+                value: stats.weeklyHours.toStringAsFixed(0),
+                icon: Icons.access_time,
+                color: Colors.orange,
+              ),
+              StatCard(
+                title: 'Конфликтов',
+                value: '${stats.conflicts}',
+                icon: Icons.warning,
+                color: stats.conflicts > 0 ? Colors.red : Colors.grey,
+              ),
+            ];
+
+            // Mobile: Grid 2x2
+            if (isMobile) {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: cards[0]),
+                      const SizedBox(width: 12),
+                      Expanded(child: cards[1]),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: cards[2]),
+                      const SizedBox(width: 12),
+                      Expanded(child: cards[3]),
+                    ],
+                  ),
+                ],
+              );
+            }
+
+            // Desktop: Row 1x4
             return Row(
               children: [
-                Expanded(
-                  child: StatCard(
-                    title: 'Сотрудников',
-                    value: '${stats.totalEmployees}',
-                    icon: Icons.people,
-                    color: Colors.blue,
-                  ),
-                ),
+                Expanded(child: cards[0]),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: StatCard(
-                    title: 'Смен сегодня',
-                    value: '${stats.todayShifts}',
-                    icon: Icons.calendar_today,
-                    color: Colors.green,
-                  ),
-                ),
+                Expanded(child: cards[1]),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: StatCard(
-                    title: 'Часов за неделю',
-                    value: stats.weeklyHours.toStringAsFixed(0),
-                    icon: Icons.access_time,
-                    color: Colors.orange,
-                  ),
-                ),
+                Expanded(child: cards[2]),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: StatCard(
-                    title: 'Конфликтов',
-                    value: '${stats.conflicts}',
-                    icon: Icons.warning,
-                    color: stats.conflicts > 0 ? Colors.red : Colors.grey,
-                  ),
-                ),
+                Expanded(child: cards[3]),
               ],
             );
           },
