@@ -16,21 +16,12 @@ class MobileScheduleGridView extends StatefulWidget {
 }
 
 class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
-  // Horizontal and vertical scroll controllers
-  late final ScrollController _horizontalController;
-  late final ScrollController _verticalController;
-
-  @override
-  void initState() {
-    super.initState();
-    _horizontalController = ScrollController();
-    _verticalController = ScrollController();
-  }
+  final TransformationController _transformationController =
+      TransformationController();
 
   @override
   void dispose() {
-    _horizontalController.dispose();
-    _verticalController.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
@@ -43,34 +34,31 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
       return _buildEmptyState();
     }
 
-    return SingleChildScrollView(
-      controller: _verticalController,
-      scrollDirection: Axis.vertical,
-      physics: const AlwaysScrollableScrollPhysics(), // Enable diagonal scroll
-      child: SingleChildScrollView(
-        controller: _horizontalController,
-        scrollDirection: Axis.horizontal,
-        physics: const AlwaysScrollableScrollPhysics(), // Enable diagonal scroll
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Days Header (sticky would require complex logic, so just scrolling)
-            DaysHeaderRow(
-              dates: dates,
-              scrollController: null, // Not using individual controller
-            ),
+    return InteractiveViewer(
+      transformationController: _transformationController,
+      boundaryMargin: const EdgeInsets.all(double.infinity),
+      minScale: 1.0,
+      maxScale: 1.0, // Disable zoom, only pan
+      constrained: false, // Allow child to be larger than viewport
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Days Header
+          DaysHeaderRow(
+            dates: dates,
+            scrollController: null,
+          ),
 
-            // Professions Rows
-            ...List.generate(professions.length, (index) {
-              return ProfessionRow(
-                profession: professions[index],
-                dates: dates,
-                viewModel: widget.viewModel,
-                scrollController: null, // Not using individual controller
-              );
-            }),
-          ],
-        ),
+          // Professions Rows
+          ...List.generate(professions.length, (index) {
+            return ProfessionRow(
+              profession: professions[index],
+              dates: dates,
+              viewModel: widget.viewModel,
+              scrollController: null,
+            );
+          }),
+        ],
       ),
     );
   }
