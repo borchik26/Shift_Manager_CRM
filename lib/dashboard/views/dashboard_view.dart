@@ -113,7 +113,17 @@ class DashboardView extends StatelessWidget {
                   )
                   .toList(),
             ),
-          Expanded(child: child),
+          Expanded(
+            child: isDesktop
+                ? child
+                : SafeArea(
+                    top: true,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: child,
+                    ),
+                  ),
+          ),
         ],
       ),
       bottomNavigationBar: !isDesktop

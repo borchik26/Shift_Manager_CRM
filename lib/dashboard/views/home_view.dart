@@ -47,22 +47,30 @@ class _HomeViewState extends State<HomeView> {
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            _buildHeader(context),
-            const SizedBox(height: 24),
+      body: SafeArea(
+        top: true,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isDesktop ? 24 : 16),
+          child: Padding(
+            padding: EdgeInsets.only(top: isDesktop ? 0 : 4.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                _buildHeader(context),
+                const SizedBox(height: 24),
 
-            // Statistics cards
-            _buildStatsRow(context),
-            const SizedBox(height: 24),
+                // Statistics cards
+                _buildStatsRow(context),
+                const SizedBox(height: 24),
 
-            // Main content
-            isDesktop ? _buildDesktopLayout(context) : _buildMobileLayout(context),
-          ],
+                // Main content
+                isDesktop
+                    ? _buildDesktopLayout(context)
+                    : _buildMobileLayout(context),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -88,15 +96,15 @@ class _HomeViewState extends State<HomeView> {
               Text(
                 'Добрый день, $userName!',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Сегодня: $formattedDate',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                  color: Colors.grey[600],
+                ),
               ),
             ],
           );
@@ -108,15 +116,15 @@ class _HomeViewState extends State<HomeView> {
             Text(
               'Добрый день, $userName!',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const Spacer(),
             Text(
               'Сегодня: $formattedDate',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                color: Colors.grey[600],
+              ),
             ),
           ],
         );
@@ -344,4 +352,3 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 }
-

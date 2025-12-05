@@ -87,11 +87,15 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   /// Mobile view with Deputy-style grid
   Widget _buildMobileView() {
-    return Column(
-      children: [
-        // Compact header with title, filters and search in one row
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return SafeArea(
+      top: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4.0),
+        child: Column(
+          children: [
+            // Compact header with title, filters and search in one row
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border(
@@ -181,7 +185,9 @@ class _ScheduleViewState extends State<ScheduleView> {
             },
           ),
         ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 
