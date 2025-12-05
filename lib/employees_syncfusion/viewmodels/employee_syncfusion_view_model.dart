@@ -32,6 +32,37 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   List<String> get availableBranches => _availableBranches;
   List<String> get availableRoles => _availableRoles;
 
+  // Get filtered employees list (for mobile cards view)
+  List<EmployeeSyncfusionModel> get filteredEmployees {
+    List<EmployeeSyncfusionModel> filtered = List.from(_employees);
+
+    // Apply branch filter
+    if (_selectedBranch != null && _selectedBranch!.isNotEmpty) {
+      filtered = filtered.where((e) => e.branch.trim() == _selectedBranch!.trim()).toList();
+    }
+
+    // Apply role filter
+    if (_selectedRole != null && _selectedRole!.isNotEmpty) {
+      filtered = filtered.where((e) => e.role.trim() == _selectedRole!.trim()).toList();
+    }
+
+    // Apply status filter
+    if (_selectedStatus != null) {
+      filtered = filtered.where((e) => e.status == _selectedStatus).toList();
+    }
+
+    // Apply name search
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where(
+            (e) => e.name.toLowerCase().contains(_searchQuery.toLowerCase()),
+          )
+          .toList();
+    }
+
+    return filtered;
+  }
+
   EmployeeSyncfusionViewModel({
     required EmployeeRepository employeeRepository,
     required ShiftRepository shiftRepository,
