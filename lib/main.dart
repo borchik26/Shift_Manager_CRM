@@ -6,7 +6,7 @@ import 'package:my_app/startup/startup_view.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Russian locale for date formatting
+  // Initialize Russian locale for date formattingv
   await initializeDateFormatting('ru', null);
 
   configureUrlStrategy();
