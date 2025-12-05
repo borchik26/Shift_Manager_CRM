@@ -19,13 +19,13 @@ class ProfessionRow extends StatelessWidget {
   final String profession;
   final List<DateTime> dates;
   final ScheduleViewModel viewModel;
-  final ScrollController scrollController;
+  final ScrollController? scrollController; // Made optional
 
   const ProfessionRow({
     required this.profession,
     required this.dates,
     required this.viewModel,
-    required this.scrollController,
+    this.scrollController, // Made optional
     super.key,
   });
 
@@ -79,30 +79,21 @@ class ProfessionRow extends StatelessWidget {
             ),
           ),
 
-          // Date cells (horizontal scroll)
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollController,
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: dates.map((date) {
-                  final shifts = viewModel.getShiftsForProfessionAndDate(
-                    profession,
-                    date,
-                  );
+          // Date cells (without scroll, parent handles it)
+          ...dates.map((date) {
+            final shifts = viewModel.getShiftsForProfessionAndDate(
+              profession,
+              date,
+            );
 
-                  return ShiftCell(
-                    date: date,
-                    profession: profession,
-                    shifts: shifts,
-                    viewModel: viewModel,
-                    onTap: () => _onCellTap(context, date, profession),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
+            return ShiftCell(
+              date: date,
+              profession: profession,
+              shifts: shifts,
+              viewModel: viewModel,
+              onTap: () => _onCellTap(context, date, profession),
+            );
+          }),
         ],
       ),
     );

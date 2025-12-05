@@ -16,56 +16,22 @@ class MobileScheduleGridView extends StatefulWidget {
 }
 
 class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
-  // Create separate scroll controllers for each row
-  late final ScrollController _headerScrollController;
-  late final List<ScrollController> _rowScrollControllers;
-  final ScrollController _verticalScrollController = ScrollController();
-
-  // Track which controller is currently scrolling to avoid infinite loops
-  bool _isScrolling = false;
+  // Horizontal and vertical scroll controllers
+  late final ScrollController _horizontalController;
+  late final ScrollController _verticalController;
 
   @override
   void initState() {
     super.initState();
-    _headerScrollController = ScrollController();
-
-    // Initialize row controllers based on number of professions
-    final professionsCount = widget.viewModel.getUniqueProfessions().length;
-    _rowScrollControllers = List.generate(
-      professionsCount,
-      (_) => ScrollController(),
-    );
+    _horizontalController = ScrollController();
+    _verticalController = ScrollController();
   }
 
   @override
   void dispose() {
-    _headerScrollController.dispose();
-    for (final controller in _rowScrollControllers) {
-      controller.dispose();
-    }
-    _verticalScrollController.dispose();
+    _horizontalController.dispose();
+    _verticalController.dispose();
     super.dispose();
-  }
-
-  /// Sync all scroll controllers to the given offset
-  void _syncScrollControllers(double offset, ScrollController source) {
-    if (_isScrolling) return;
-    _isScrolling = true;
-
-    // Sync header if source is not header
-    if (source != _headerScrollController &&
-        _headerScrollController.hasClients) {
-      _headerScrollController.jumpTo(offset);
-    }
-
-    // Sync all rows if source is not this row
-    for (final controller in _rowScrollControllers) {
-      if (controller != source && controller.hasClients) {
-        controller.jumpTo(offset);
-      }
-    }
-
-    _isScrolling = false;
   }
 
   @override
@@ -73,66 +39,39 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
     final dates = widget.viewModel.getDateRange();
     final professions = widget.viewModel.getUniqueProfessions();
 
-    // Recreate controllers if profession count changed
-    if (_rowScrollControllers.length != professions.length) {
-      for (final controller in _rowScrollControllers) {
-        controller.dispose();
-      }
-      _rowScrollControllers.clear();
-      _rowScrollControllers.addAll(
-        List.generate(professions.length, (_) => ScrollController()),
-      );
+    if (professions.isEmpty) {
+      return _buildEmptyState();
     }
 
-    return Column(
-      children: [
-        // Days Header (sticky) with NotificationListener
-        NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is ScrollUpdateNotification) {
-              _syncScrollControllers(
-                notification.metrics.pixels,
-                _headerScrollController,
-              );
-            }
-            return false;
-          },
-          child: DaysHeaderRow(
-            dates: dates,
-            scrollController: _headerScrollController,
-          ),
-        ),
+    return SingleChildScrollView(
+      controller: _verticalController,
+      scrollDirection: Axis.vertical,
+      physics: const AlwaysScrollableScrollPhysics(), // Enable diagonal scroll
+      child: SingleChildScrollView(
+        controller: _horizontalController,
+        scrollDirection: Axis.horizontal,
+        physics: const AlwaysScrollableScrollPhysics(), // Enable diagonal scroll
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Days Header (sticky would require complex logic, so just scrolling)
+            DaysHeaderRow(
+              dates: dates,
+              scrollController: null, // Not using individual controller
+            ),
 
-        // Professions Grid (vertical scroll)
-        Expanded(
-          child: professions.isEmpty
-              ? _buildEmptyState()
-              : SingleChildScrollView(
-                  controller: _verticalScrollController,
-                  child: Column(
-                    children: List.generate(professions.length, (index) {
-                      return NotificationListener<ScrollNotification>(
-                        onNotification: (notification) {
-                          if (notification is ScrollUpdateNotification) {
-                            _syncScrollControllers(
-                              notification.metrics.pixels,
-                              _rowScrollControllers[index],
-                            );
-                          }
-                          return false;
-                        },
-                        child: ProfessionRow(
-                          profession: professions[index],
-                          dates: dates,
-                          viewModel: widget.viewModel,
-                          scrollController: _rowScrollControllers[index],
-                        ),
-                      );
-                    }),
-                  ),
-                ),
+            // Professions Rows
+            ...List.generate(professions.length, (index) {
+              return ProfessionRow(
+                profession: professions[index],
+                dates: dates,
+                viewModel: widget.viewModel,
+                scrollController: null, // Not using individual controller
+              );
+            }),
+          ],
         ),
-      ],
+      ),
     );
   }
 

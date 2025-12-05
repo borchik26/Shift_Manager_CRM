@@ -49,22 +49,24 @@ class _ScheduleViewState extends State<ScheduleView> {
     final isMobile = ResponsiveHelper.isMobile(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('График смен'),
-        actions: [
-          if (!isMobile)
-            ListenableBuilder(
-              listenable: _viewModel,
-              builder: (context, _) {
-                return ViewSwitcher(
-                  currentView: _viewModel.currentViewType,
-                  onViewChanged: _viewModel.changeViewType,
-                );
-              },
+      // Remove AppBar on mobile for more space
+      appBar: isMobile
+          ? null
+          : AppBar(
+              title: const Text('График смен'),
+              actions: [
+                ListenableBuilder(
+                  listenable: _viewModel,
+                  builder: (context, _) {
+                    return ViewSwitcher(
+                      currentView: _viewModel.currentViewType,
+                      onViewChanged: _viewModel.changeViewType,
+                    );
+                  },
+                ),
+                const SizedBox(width: 16),
+              ],
             ),
-          if (!isMobile) const SizedBox(width: 16),
-        ],
-      ),
       body: ValueListenableBuilder<AsyncValue<void>>(
         valueListenable: _viewModel.state,
         builder: (context, state, child) {
@@ -87,9 +89,9 @@ class _ScheduleViewState extends State<ScheduleView> {
   Widget _buildMobileView() {
     return Column(
       children: [
-        // Compact search bar with filter icon
+        // Compact header with title, filters and search in one row
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border(
@@ -98,34 +100,72 @@ class _ScheduleViewState extends State<ScheduleView> {
           ),
           child: Row(
             children: [
-              // Filter icon button
-              IconButton(
+              // Title
+              const Text(
+                'График смен',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Filter button
+              OutlinedButton.icon(
+                onPressed: () => _showMobileFiltersSheet(context),
                 icon: ListenableBuilder(
                   listenable: _viewModel,
                   builder: (context, _) {
                     return Badge(
                       isLabelVisible: _viewModel.activeFiltersCount > 0,
                       label: Text('${_viewModel.activeFiltersCount}'),
-                      child: const Icon(Icons.filter_list),
+                      child: const Icon(Icons.filter_list, size: 16),
                     );
                   },
                 ),
-                onPressed: () => _showMobileFiltersSheet(context),
-                tooltip: 'Фильтры',
+                label: const Text(
+                  'Фильтры',
+                  style: TextStyle(fontSize: 12),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
+              const SizedBox(width: 8),
 
               // Compact search field
               Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Поиск...',
-                    prefixIcon: const Icon(Icons.search, size: 18),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
+                  height: 36,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Поиск...',
+                      hintStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, size: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 0,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
                     ),
+                    style: const TextStyle(fontSize: 13),
+                    onChanged: _viewModel.setSearchQuery,
                   ),
-                  onChanged: _viewModel.setSearchQuery,
                 ),
               ),
             ],
@@ -425,24 +465,6 @@ class _ScheduleViewState extends State<ScheduleView> {
           },
         ),
       ],
-    );
-  }
-
-  /// FAB for mobile to create new shift
-  Widget _buildFAB() {
-    return FloatingActionButton.extended(
-      onPressed: () async {
-        final result = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => const CreateShiftDialog(),
-        );
-        if (result == true && mounted) {
-          _viewModel.refreshShifts();
-        }
-      },
-      icon: const Icon(Icons.add),
-      label: const Text('Смена'),
-      backgroundColor: Colors.blue,
     );
   }
 
