@@ -125,7 +125,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
                 Text(
                   'Сотрудники',
                   style: TextStyle(
-                    fontSize: isMobile ? 20 : 24,
+                    fontSize: isMobile ? 18 : 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

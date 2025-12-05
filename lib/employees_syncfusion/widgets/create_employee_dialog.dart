@@ -136,10 +136,13 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Добавить сотрудника',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Добавить сотрудника',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
@@ -201,6 +204,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedPosition,
                     decoration: InputDecoration(
                       labelText: 'Должность',
@@ -216,7 +220,10 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                       final rate = EmployeeProfile.positionRates[position]!;
                       return DropdownMenuItem(
                         value: position,
-                        child: Text('$position ($rate ₽/ч)'),
+                        child: Text(
+                          '$position ($rate ₽/ч)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -231,6 +238,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                     builder: (context, state, child) {
                       final branches = state.dataOrNull ?? [];
                       return DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedBranch,
                         decoration: InputDecoration(
                           labelText: 'Филиал',
@@ -246,7 +254,10 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                             .map(
                               (b) => DropdownMenuItem(
                                 value: b,
-                                child: Text(b),
+                                child: Text(
+                                  b,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(),

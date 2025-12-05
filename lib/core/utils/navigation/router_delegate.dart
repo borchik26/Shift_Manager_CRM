@@ -75,7 +75,7 @@ class AppRouterDelegate extends RouterDelegate<RouteData> {
 
       pages.add(
         NoTransitionPage(
-          key: ValueKey('Page_${routeData.hashCode}'),
+          key: ValueKey('Page_${routeData.pathWithParams}'),
           child: child,
         ),
       );

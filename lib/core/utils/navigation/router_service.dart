@@ -114,6 +114,11 @@ class RouterService with ObservableRouter {
     notifyRemove(routeToRemove);
   }
 
+  /// Check if a path exists in the navigation stack
+  bool existsInStack(String path) {
+    return _existsInStack(path);
+  }
+
   bool _existsInStack(String path) {
     final uri = Uri.parse(path);
     return _navigationStack.value.any((r) => r.uri == uri);

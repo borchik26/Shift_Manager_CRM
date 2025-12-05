@@ -349,15 +349,19 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(
+          maxWidth: 500,
+          maxHeight: 600,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -416,13 +420,20 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedRole,
                         decoration: const InputDecoration(
                           labelText: 'Должность',
                           border: OutlineInputBorder(),
                         ),
                         items: _roles.map((r) {
-                          return DropdownMenuItem(value: r, child: Text(r));
+                          return DropdownMenuItem(
+                            value: r,
+                            child: Text(
+                              r,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
                         }).toList(),
                         onChanged: (value) =>
                             setState(() => _selectedRole = value),
@@ -433,13 +444,20 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedBranch,
                         decoration: const InputDecoration(
                           labelText: 'Филиал',
                           border: OutlineInputBorder(),
                         ),
                         items: _branches.map((b) {
-                          return DropdownMenuItem(value: b, child: Text(b));
+                          return DropdownMenuItem(
+                            value: b,
+                            child: Text(
+                              b,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
                         }).toList(),
                         onChanged: (value) {
                           setState(() => _selectedBranch = value);
@@ -582,6 +600,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

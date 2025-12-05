@@ -27,17 +27,18 @@ final routes = [
   RouteEntry(
     path: '/dashboard',
     builder: (key, routeData) => DashboardView(
-      key: const ValueKey('/dashboard'),
+      key: key,
       currentPath: '/dashboard',
       child: const HomeView(key: ValueKey('home_view')),
     ),
     requiresAuth: true,
   ),
-  
+
   // Employees - REQUIRES AUTH
   RouteEntry(
     path: '/dashboard/employees',
     builder: (key, routeData) => DashboardView(
+      key: key,
       currentPath: '/dashboard/employees',
       child: const EmployeeSyncfusionView(),
     ),
@@ -48,17 +49,19 @@ final routes = [
     builder: (key, routeData) {
       final id = routeData.pathParameters['id'] ?? '';
       return DashboardView(
+        key: key,
         currentPath: '/dashboard/employees',
         child: ProfileView(employeeId: id),
       );
     },
     requiresAuth: true,
   ),
-  
+
   // Schedule - REQUIRES AUTH
   RouteEntry(
     path: '/dashboard/schedule',
     builder: (key, routeData) => DashboardView(
+      key: key,
       currentPath: '/dashboard/schedule',
       child: const ScheduleView(),
     ),

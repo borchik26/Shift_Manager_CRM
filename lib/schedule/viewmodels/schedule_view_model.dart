@@ -424,8 +424,25 @@ class ScheduleViewModel extends ChangeNotifier {
     });
   }
 
+  /// Get unique professions WITH "Open Shifts" row for mobile grid
+  /// Adds "Свободные смены" as first row if there are unassigned shifts
+  List<String> getUniqueProfessionsWithOpenShifts() {
+    final professions = getUniqueProfessions();
+
+    // Check if there are any unassigned shifts
+    final hasUnassignedShifts = _getFilteredShifts()
+        .any((shift) => shift.employeeId == 'unassigned');
+
+    if (hasUnassignedShifts) {
+      return ['Свободные смены', ...professions];
+    }
+
+    return professions;
+  }
+
   /// Get shifts for specific profession and date (for mobile grid cells)
   /// Filters by both profession (roleTitle) and same calendar day
+  /// Special case: "Свободные смены" returns unassigned shifts
   List<ShiftModel> getShiftsForProfessionAndDate(
     String profession,
     DateTime date,
@@ -436,13 +453,24 @@ class ScheduleViewModel extends ChangeNotifier {
       final sameDay = shift.startTime.year == date.year &&
                       shift.startTime.month == date.month &&
                       shift.startTime.day == date.day;
+
+      // Special case: "Свободные смены" row shows unassigned shifts
+      if (profession == 'Свободные смены') {
+        return shift.employeeId == 'unassigned' && sameDay;
+      }
+
       return shift.roleTitle == profession && sameDay;
     }).toList();
   }
 
   /// Get employee full name by ID (for shift cards in mobile grid)
-  /// Returns null if employee not found
+  /// Returns null if employee not found or if employeeId is 'unassigned'
   String? getEmployeeNameById(String employeeId) {
+    // Handle unassigned shifts explicitly
+    if (employeeId == 'unassigned') {
+      return null;
+    }
+
     try {
       return _employees.firstWhere((e) => e.id == employeeId).fullName;
     } catch (_) {

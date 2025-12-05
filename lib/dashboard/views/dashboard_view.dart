@@ -26,7 +26,15 @@ class DashboardView extends StatelessWidget {
   }
 
   void _navigateTo(String path) {
-    locator<RouterService>().replace(Path(name: path));
+    final routerService = locator<RouterService>();
+
+    // Smart navigation: if path already exists in stack, go back to it
+    // Otherwise, replace current route
+    if (routerService.existsInStack(path)) {
+      routerService.backUntil(Path(name: path));
+    } else {
+      routerService.replace(Path(name: path));
+    }
   }
 
   Future<void> _logout() async {
@@ -64,48 +72,7 @@ class DashboardView extends StatelessWidget {
       ),
     ];
 
-    final drawer = !isDesktop
-        ? Drawer(
-            child: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const ListTile(
-                    leading: CircleAvatar(child: Icon(Icons.person)),
-                    title: Text('Shift Manager'),
-                    subtitle: Text('Управление сменами'),
-                  ),
-                  const Divider(),
-                  ...destinations.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final item = entry.value;
-                    final isSelected = selectedIndex == index;
-                    return ListTile(
-                      leading: Icon(
-                        isSelected ? item.selectedIcon : item.icon,
-                      ),
-                      title: Text(item.label),
-                      selected: isSelected,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        _navigateTo(item.path);
-                      },
-                    );
-                  }),
-                  const Spacer(),
-                  ListTile(
-                    leading: const Icon(Icons.logout),
-                    title: const Text('Выйти'),
-                    onTap: _logout,
-                  ),
-                ],
-              ),
-            ),
-          )
-        : null;
-
     return Scaffold(
-      drawer: drawer,
       body: Row(
         children: [
           if (isDesktop)
@@ -146,31 +113,7 @@ class DashboardView extends StatelessWidget {
                   )
                   .toList(),
             ),
-          Expanded(
-            child: Column(
-              children: [
-                if (!isDesktop)
-                  AppBar(
-                    title: const Text('Shift Manager'),
-                    leading: Builder(
-                      builder: (context) {
-                        return IconButton(
-                          icon: const Icon(Icons.menu),
-                          onPressed: () => Scaffold.of(context).openDrawer(),
-                        );
-                      },
-                    ),
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.logout),
-                        onPressed: _logout,
-                      ),
-                    ],
-                  ),
-                Expanded(child: child),
-              ],
-            ),
-          ),
+          Expanded(child: child),
         ],
       ),
       bottomNavigationBar: !isDesktop

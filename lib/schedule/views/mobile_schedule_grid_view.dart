@@ -28,7 +28,7 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
   @override
   Widget build(BuildContext context) {
     final dates = widget.viewModel.getDateRange();
-    final professions = widget.viewModel.getUniqueProfessions();
+    final professions = widget.viewModel.getUniqueProfessionsWithOpenShifts();
 
     if (professions.isEmpty) {
       return _buildEmptyState();
@@ -36,10 +36,12 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
 
     return InteractiveViewer(
       transformationController: _transformationController,
-      boundaryMargin: const EdgeInsets.all(double.infinity),
+      boundaryMargin: EdgeInsets.zero, // Strict boundaries - no scrolling beyond content
       minScale: 1.0,
       maxScale: 1.0, // Disable zoom, only pan
       constrained: false, // Allow child to be larger than viewport
+      panEnabled: true,
+      scaleEnabled: false, // Disable pinch-to-zoom
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -49,7 +51,7 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
             scrollController: null,
           ),
 
-          // Professions Rows
+          // Professions Rows (including "Свободные смены" if present)
           ...List.generate(professions.length, (index) {
             return ProfessionRow(
               profession: professions[index],
