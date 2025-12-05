@@ -16,8 +16,16 @@ import 'package:uuid/uuid.dart';
 
 class CreateShiftDialog extends StatefulWidget {
   final ShiftModel? existingShift;
+  final DateTime? initialDate; // Pre-fill date when creating from mobile grid
+  final String?
+  initialProfession; // Pre-fill profession when creating from mobile grid
 
-  const CreateShiftDialog({super.key, this.existingShift});
+  const CreateShiftDialog({
+    super.key,
+    this.existingShift,
+    this.initialDate,
+    this.initialProfession,
+  });
 
   @override
   State<CreateShiftDialog> createState() => _CreateShiftDialogState();
@@ -92,6 +100,15 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
       );
       if (shift.employeePreferences != null) {
         _preferencesController.text = shift.employeePreferences!;
+      }
+    } else {
+      // Pre-fill from mobile grid tap (if provided)
+      if (widget.initialDate != null) {
+        _selectedDate = widget.initialDate!;
+      }
+      if (widget.initialProfession != null &&
+          _roles.contains(widget.initialProfession)) {
+        _selectedRole = widget.initialProfession;
       }
     }
   }
@@ -373,7 +390,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                       initialValue: _selectedEmployeeId,
                       decoration: const InputDecoration(
                         labelText: 'Сотрудник',
-                        hintText: 'Оставьте пустым для свободной смены',
+                        hintText: 'Выберите сотрудника',
                         border: OutlineInputBorder(),
                       ),
                       items: employees.map((e) {

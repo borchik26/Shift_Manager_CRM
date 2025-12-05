@@ -404,6 +404,61 @@ class ScheduleViewModel extends ChangeNotifier {
     return branches.toList();
   }
 
+  /// Get list of unique professions from current shifts (for mobile grid view)
+  /// Returns professions sorted by predefined order: Менеджер, Повар, Кассир, Уборщица
+  List<String> getUniqueProfessions() {
+    final professions = <String>{};
+    for (final shift in _getFilteredShifts()) {
+      professions.add(shift.roleTitle);
+    }
+
+    // Sort by predefined order
+    final order = ['Менеджер', 'Повар', 'Кассир', 'Уборщица'];
+    return professions.toList()..sort((a, b) {
+      final aIndex = order.indexOf(a);
+      final bIndex = order.indexOf(b);
+      if (aIndex == -1 && bIndex == -1) return a.compareTo(b);
+      if (aIndex == -1) return 1;
+      if (bIndex == -1) return -1;
+      return aIndex.compareTo(bIndex);
+    });
+  }
+
+  /// Get shifts for specific profession and date (for mobile grid cells)
+  /// Filters by both profession (roleTitle) and same calendar day
+  List<ShiftModel> getShiftsForProfessionAndDate(
+    String profession,
+    DateTime date,
+  ) {
+    final filteredShifts = _getFilteredShifts();
+
+    return filteredShifts.where((shift) {
+      final sameDay = shift.startTime.year == date.year &&
+                      shift.startTime.month == date.month &&
+                      shift.startTime.day == date.day;
+      return shift.roleTitle == profession && sameDay;
+    }).toList();
+  }
+
+  /// Get employee full name by ID (for shift cards in mobile grid)
+  /// Returns null if employee not found
+  String? getEmployeeNameById(String employeeId) {
+    try {
+      return _employees.firstWhere((e) => e.id == employeeId).fullName;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get list of dates for horizontal scroll (mobile grid header)
+  /// Returns 7 consecutive days starting from today at midnight
+  List<DateTime> getDateRange() {
+    final today = DateTime.now();
+    return List.generate(7, (i) {
+      return DateTime(today.year, today.month, today.day + i);
+    });
+  }
+
   Future<void> refreshShifts() async {
     await _loadData();
   }

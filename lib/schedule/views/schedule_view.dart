@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
+import 'package:my_app/core/utils/responsive_helper.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/schedule/models/shift_model.dart';
 import 'package:my_app/schedule/viewmodels/schedule_view_model.dart';
+import 'package:my_app/schedule/views/mobile_schedule_grid_view.dart';
 import 'package:my_app/schedule/widgets/create_shift_dialog.dart';
 import 'package:my_app/schedule/widgets/view_switcher.dart';
 import 'package:my_app/schedule/widgets/summary_bar.dart';
@@ -44,20 +46,23 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('График смен'),
         actions: [
-          ListenableBuilder(
-            listenable: _viewModel,
-            builder: (context, _) {
-              return ViewSwitcher(
-                currentView: _viewModel.currentViewType,
-                onViewChanged: _viewModel.changeViewType,
-              );
-            },
-          ),
-          const SizedBox(width: 16),
+          if (!isMobile)
+            ListenableBuilder(
+              listenable: _viewModel,
+              builder: (context, _) {
+                return ViewSwitcher(
+                  currentView: _viewModel.currentViewType,
+                  onViewChanged: _viewModel.changeViewType,
+                );
+              },
+            ),
+          if (!isMobile) const SizedBox(width: 16),
         ],
       ),
       body: ValueListenableBuilder<AsyncValue<void>>(
@@ -71,286 +76,460 @@ class _ScheduleViewState extends State<ScheduleView> {
             return Center(child: Text('Ошибка: ${state.errorOrNull}'));
           }
 
-          return Column(
+          // ADAPTIVE: Mobile vs Desktop
+          return isMobile ? _buildMobileView() : _buildDesktopView();
+        },
+      ),
+    );
+  }
+
+  /// Mobile view with Deputy-style grid
+  Widget _buildMobileView() {
+    return Column(
+      children: [
+        // Compact search bar with filter icon
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          child: Row(
             children: [
-              // Search Filter Bar
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade200),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 250,
-                      height: 36,
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Поиск сотрудника...',
-                          prefixIcon: const Icon(Icons.search, size: 18),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 0,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                        ),
-                        style: const TextStyle(fontSize: 13),
-                        onChanged: (value) {
-                          _viewModel.setSearchQuery(value);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ValueListenableBuilder<AsyncValue<List<Employee>>>(
-                      valueListenable: _viewModel.employeesState,
-                      builder: (context, employeesState, _) {
-                        if (employeesState.isLoading) {
-                          return const SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
-
-                        return PopupMenuButton<String>(
-                          icon: ListenableBuilder(
-                            listenable: _viewModel,
-                            builder: (context, _) {
-                              return Badge(
-                                isLabelVisible:
-                                    _viewModel.activeFiltersCount > 0,
-                                label: Text('${_viewModel.activeFiltersCount}'),
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: Colors.white,
-                                  ),
-                                  child: const Icon(
-                                    Icons.filter_alt_outlined,
-                                    size: 18,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          tooltip: 'Сортировка сотрудников',
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              enabled: false,
-                              child: Text(
-                                'Сортировка сотрудников:',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'name_asc',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.sort_by_alpha, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('По имени (А-Я)'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'name_desc',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.sort_by_alpha, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('По имени (Я-А)'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'role',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.work, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('По позиции'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'branch',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.location_city, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('По филиалу'),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onSelected: (value) {
-                            switch (value) {
-                              case 'name_asc':
-                                _viewModel.sortEmployees('name_asc');
-                                break;
-                              case 'name_desc':
-                                _viewModel.sortEmployees('name_desc');
-                                break;
-                              case 'role':
-                                _viewModel.sortEmployees('role');
-                                break;
-                              case 'branch':
-                                _viewModel.sortEmployees('branch');
-                                break;
-                            }
-                          },
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    // Фильтр по филиалу
-                    _buildBranchDropdown(),
-                    const SizedBox(width: 12),
-                    // Фильтр по должности
-                    _buildRoleDropdown(),
-                    const SizedBox(width: 12),
-                    // Фильтр по сотруднику
-                    ValueListenableBuilder<AsyncValue<List<Employee>>>(
-                      valueListenable: _viewModel.employeesState,
-                      builder: (context, employeesState, _) {
-                        if (employeesState.isLoading) return const SizedBox();
-                        if (employeesState is! AsyncData<List<Employee>>)
-                          return const SizedBox();
-
-                        return EmployeeFilterDropdown(
-                          employees: employeesState.data,
-                          selectedEmployeeId: _viewModel.employeeFilter,
-                          onEmployeeSelected: _viewModel.setEmployeeFilter,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    // Фильтр по периоду
-                    ListenableBuilder(
-                      listenable: _viewModel,
-                      builder: (context, _) {
-                        return DateRangeFilterDropdown(
-                          selectedFilter: _viewModel.dateRangeFilter,
-                          onFilterChanged: _viewModel.setDateRangeFilter,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    // Фильтр по статусу
-                    ListenableBuilder(
-                      listenable: _viewModel,
-                      builder: (context, _) {
-                        return StatusFilterDropdown(
-                          selectedFilter: _viewModel.statusFilter,
-                          onFilterChanged: _viewModel.setStatusFilter,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    // Кнопка сброса фильтров
-                    ListenableBuilder(
-                      listenable: _viewModel,
-                      builder: (context, _) {
-                        if (_viewModel.activeFiltersCount == 0) {
-                          return const SizedBox();
-                        }
-                        return TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _selectedBranch = null;
-                              _selectedRole = null;
-                            });
-                            _viewModel.clearFilters();
-                          },
-                          icon: const Icon(Icons.clear, size: 18),
-                          label: Text(
-                            'Сбросить (${_viewModel.activeFiltersCount})',
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                          ),
-                        );
-                      },
-                    ),
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final result = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => CreateShiftDialog(
-                            key: ValueKey(
-                              'create_${DateTime.now().millisecondsSinceEpoch}',
-                            ),
-                          ),
-                        );
-                        if (result == true && mounted) {
-                          _viewModel.refreshShifts();
-                        }
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Добавить смену'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Role Legend
-              _buildRoleLegend(),
-              Expanded(
-                child: ListenableBuilder(
+              // Filter icon button
+              IconButton(
+                icon: ListenableBuilder(
                   listenable: _viewModel,
                   builder: (context, _) {
-                    return LayoutBuilder(
-                      builder: (context, constraints) {
-                        // Calculate visible count to force 40px row height
-                        // Subtract header height approximation (roughly 60-80px for time ruler)
-                        final double availableHeight = constraints.maxHeight;
-                        final int visibleCount = (availableHeight / 40).floor();
+                    return Badge(
+                      isLabelVisible: _viewModel.activeFiltersCount > 0,
+                      label: Text('${_viewModel.activeFiltersCount}'),
+                      child: const Icon(Icons.filter_list),
+                    );
+                  },
+                ),
+                onPressed: () => _showMobileFiltersSheet(context),
+                tooltip: 'Фильтры',
+              ),
 
-                        // Force rebuild when view type changes
-                        final isMonthView =
-                            _viewModel.currentViewType ==
-                            ScheduleViewType.month;
+              // Compact search field
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Поиск...',
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  onChanged: _viewModel.setSearchQuery,
+                ),
+              ),
+            ],
+          ),
+        ),
 
-                        // Use different calendar configuration for Month vs Day/Week
-                        return isMonthView
-                            ? _buildMonthCalendar()
-                            : _buildTimelineCalendar(visibleCount);
+        // Mobile Grid
+        Expanded(
+          child: ListenableBuilder(
+            listenable: _viewModel,
+            builder: (context, _) {
+              return MobileScheduleGridView(viewModel: _viewModel);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Desktop view with existing Syncfusion Calendar
+  Widget _buildDesktopView() {
+    return Column(
+      children: [
+        // Search Filter Bar
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 250,
+                height: 36,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Поиск сотрудника...',
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                  onChanged: (value) {
+                    _viewModel.setSearchQuery(value);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              ValueListenableBuilder<AsyncValue<List<Employee>>>(
+                valueListenable: _viewModel.employeesState,
+                builder: (context, employeesState, _) {
+                  if (employeesState.isLoading) {
+                    return const SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  }
+
+                  return PopupMenuButton<String>(
+                    icon: ListenableBuilder(
+                      listenable: _viewModel,
+                      builder: (context, _) {
+                        return Badge(
+                          isLabelVisible: _viewModel.activeFiltersCount > 0,
+                          label: Text('${_viewModel.activeFiltersCount}'),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.white,
+                            ),
+                            child: const Icon(
+                              Icons.filter_alt_outlined,
+                              size: 18,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    tooltip: 'Сортировка сотрудников',
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        enabled: false,
+                        child: Text(
+                          'Сортировка сотрудников:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'name_asc',
+                        child: Row(
+                          children: [
+                            Icon(Icons.sort_by_alpha, size: 18),
+                            SizedBox(width: 8),
+                            Text('По имени (А-Я)'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'name_desc',
+                        child: Row(
+                          children: [
+                            Icon(Icons.sort_by_alpha, size: 18),
+                            SizedBox(width: 8),
+                            Text('По имени (Я-А)'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'role',
+                        child: Row(
+                          children: [
+                            Icon(Icons.work, size: 18),
+                            SizedBox(width: 8),
+                            Text('По позиции'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'branch',
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_city, size: 18),
+                            SizedBox(width: 8),
+                            Text('По филиалу'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'name_asc':
+                          _viewModel.sortEmployees('name_asc');
+                          break;
+                        case 'name_desc':
+                          _viewModel.sortEmployees('name_desc');
+                          break;
+                        case 'role':
+                          _viewModel.sortEmployees('role');
+                          break;
+                        case 'branch':
+                          _viewModel.sortEmployees('branch');
+                          break;
+                      }
+                    },
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              // Фильтр по филиалу
+              _buildBranchDropdown(),
+              const SizedBox(width: 12),
+              // Фильтр по должности
+              _buildRoleDropdown(),
+              const SizedBox(width: 12),
+              // Фильтр по сотруднику
+              ValueListenableBuilder<AsyncValue<List<Employee>>>(
+                valueListenable: _viewModel.employeesState,
+                builder: (context, employeesState, _) {
+                  if (employeesState.isLoading) return const SizedBox();
+                  if (employeesState is! AsyncData<List<Employee>>)
+                    return const SizedBox();
+
+                  return EmployeeFilterDropdown(
+                    employees: employeesState.data,
+                    selectedEmployeeId: _viewModel.employeeFilter,
+                    onEmployeeSelected: _viewModel.setEmployeeFilter,
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              // Фильтр по периоду
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  return DateRangeFilterDropdown(
+                    selectedFilter: _viewModel.dateRangeFilter,
+                    onFilterChanged: _viewModel.setDateRangeFilter,
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              // Фильтр по статусу
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  return StatusFilterDropdown(
+                    selectedFilter: _viewModel.statusFilter,
+                    onFilterChanged: _viewModel.setStatusFilter,
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              // Кнопка сброса фильтров
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  if (_viewModel.activeFiltersCount == 0) {
+                    return const SizedBox();
+                  }
+                  return TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _selectedBranch = null;
+                        _selectedRole = null;
+                      });
+                      _viewModel.clearFilters();
+                    },
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: Text(
+                      'Сбросить (${_viewModel.activeFiltersCount})',
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                    ),
+                  );
+                },
+              ),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => CreateShiftDialog(
+                      key: ValueKey(
+                        'create_${DateTime.now().millisecondsSinceEpoch}',
+                      ),
+                    ),
+                  );
+                  if (result == true && mounted) {
+                    _viewModel.refreshShifts();
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить смену'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Role Legend
+        _buildRoleLegend(),
+        Expanded(
+          child: ListenableBuilder(
+            listenable: _viewModel,
+            builder: (context, _) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate visible count to force 40px row height
+                  // Subtract header height approximation (roughly 60-80px for time ruler)
+                  final double availableHeight = constraints.maxHeight;
+                  final int visibleCount = (availableHeight / 40).floor();
+
+                  // Force rebuild when view type changes
+                  final isMonthView =
+                      _viewModel.currentViewType == ScheduleViewType.month;
+
+                  // Use different calendar configuration for Month vs Day/Week
+                  return isMonthView
+                      ? _buildMonthCalendar()
+                      : _buildTimelineCalendar(visibleCount);
+                },
+              );
+            },
+          ),
+        ),
+        // Summary bar at the bottom
+        ListenableBuilder(
+          listenable: _viewModel,
+          builder: (context, _) {
+            return SummaryBar(statistics: _viewModel.statistics);
+          },
+        ),
+      ],
+    );
+  }
+
+  /// FAB for mobile to create new shift
+  Widget _buildFAB() {
+    return FloatingActionButton.extended(
+      onPressed: () async {
+        final result = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => const CreateShiftDialog(),
+        );
+        if (result == true && mounted) {
+          _viewModel.refreshShifts();
+        }
+      },
+      icon: const Icon(Icons.add),
+      label: const Text('Смена'),
+      backgroundColor: Colors.blue,
+    );
+  }
+
+  /// Show mobile filters bottom sheet
+  void _showMobileFiltersSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          // TODO: Create FilterChipsBottomSheet widget
+          // For now, show basic filter UI
+          return Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Text(
+                  'Фильтры',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                // Branch filter
+                ListenableBuilder(
+                  listenable: _viewModel,
+                  builder: (context, _) {
+                    return DropdownButtonFormField<String>(
+                      initialValue: _selectedBranch,
+                      decoration: const InputDecoration(
+                        labelText: 'Филиал',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _viewModel.getBranches().map((branch) {
+                        return DropdownMenuItem(
+                          value: branch,
+                          child: Text(branch),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedBranch = value);
+                        _viewModel.setLocationFilter(value);
                       },
                     );
                   },
                 ),
-              ),
-              // Summary bar at the bottom
-              ListenableBuilder(
-                listenable: _viewModel,
-                builder: (context, _) {
-                  return SummaryBar(statistics: _viewModel.statistics);
-                },
-              ),
-            ],
+                const SizedBox(height: 12),
+                // Role filter
+                ListenableBuilder(
+                  listenable: _viewModel,
+                  builder: (context, _) {
+                    return DropdownButtonFormField<String>(
+                      initialValue: _selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: 'Должность',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _viewModel.getRoles().map((role) {
+                        return DropdownMenuItem(
+                          value: role,
+                          child: Text(role),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedRole = value);
+                        _viewModel.setRoleFilter(value);
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                // Clear filters button
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedBranch = null;
+                      _selectedRole = null;
+                    });
+                    _viewModel.clearFilters();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Сбросить фильтры'),
+                ),
+              ],
+            ),
           );
         },
       ),

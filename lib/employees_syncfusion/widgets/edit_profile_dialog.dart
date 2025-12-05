@@ -177,7 +177,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Редактирование профиля',
+                        'Редактирование',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
