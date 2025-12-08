@@ -285,8 +285,8 @@ class MockApiService implements ApiService {
     await Future.delayed(_delay);
 
     // Simple mock authentication
-    if ((username == 'admin' || username == 'admin@example.com') &&
-        (password == 'admin' || password == 'password123')) {
+    if ((username == 'admin' || username == 'manager@test.com') &&
+        (password == 'admin' || password == 'TestPass123!')) {
       _currentUser = const User(
         id: 'user_1',
         username: 'admin',

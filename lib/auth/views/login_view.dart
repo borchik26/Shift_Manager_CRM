@@ -16,8 +16,8 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   late final AuthViewModel _viewModel;
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'admin@example.com');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _emailController = TextEditingController(text: 'manager@test.com');
+  final _passwordController = TextEditingController(text: 'TestPass123!');
   bool _isPasswordVisible = false;
 
   @override
@@ -172,7 +172,7 @@ class _LoginViewState extends State<LoginView> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Тестовые данные:\nEmail: admin@example.com\nПароль: password123',
+                        'Тестовые данные:\nEmail: manager@test.com\nПароль: TestPass123!',
                         style: TextStyle(
                           color: Colors.grey,
                           fontSize: 12,

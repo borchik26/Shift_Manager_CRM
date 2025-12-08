@@ -10,6 +10,8 @@ class Employee {
   final String? avatarUrl;
   final String? email;
   final String? phone;
+  final String? address; // ✅ ADDED: Physical address
+  final double hourlyRate; // ✅ ADDED: Hourly rate in rubles
   final List<DesiredDayOff> desiredDaysOff;
 
   const Employee({
@@ -23,6 +25,8 @@ class Employee {
     this.avatarUrl,
     this.email,
     this.phone,
+    this.address,
+    this.hourlyRate = 0.0, // Default hourly rate
     this.desiredDaysOff = const [],
   });
 
@@ -40,6 +44,8 @@ class Employee {
       avatarUrl: json['avatar_url'] as String?,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
+      address: json['address'] as String?, // ✅ ADDED
+      hourlyRate: (json['hourly_rate'] as num?)?.toDouble() ?? 0.0, // ✅ ADDED
       desiredDaysOff: (json['desired_days_off'] as List<dynamic>?)
               ?.map((e) => DesiredDayOff.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -59,6 +65,8 @@ class Employee {
       'avatar_url': avatarUrl,
       'email': email,
       'phone': phone,
+      'address': address, // ✅ ADDED
+      'hourly_rate': hourlyRate, // ✅ ADDED
       'desired_days_off': desiredDaysOff.map((d) => d.toJson()).toList(),
     };
   }
@@ -74,6 +82,8 @@ class Employee {
     String? avatarUrl,
     String? email,
     String? phone,
+    String? address, // ✅ ADDED
+    double? hourlyRate, // ✅ ADDED
     List<DesiredDayOff>? desiredDaysOff,
   }) {
     return Employee(
@@ -87,6 +97,8 @@ class Employee {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      address: address ?? this.address, // ✅ ADDED
+      hourlyRate: hourlyRate ?? this.hourlyRate, // ✅ ADDED
       desiredDaysOff: desiredDaysOff ?? this.desiredDaysOff,
     );
   }

@@ -7,7 +7,7 @@ import 'package:my_app/core/utils/navigation/router_service.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/data/services/api_service.dart';
-import 'package:my_app/data/services/mock_api_service.dart';
+import 'package:my_app/data/services/supabase_api_service.dart'; // ✅ ADDED: Production API
 import 'package:my_app/data/repositories/auth_repository.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
@@ -31,8 +31,9 @@ final modules = [
   ),
 
   // Data Layer - API Service
+  // ✅ SWITCHED TO PRODUCTION: Using SupabaseApiService
   Module<ApiService>(
-    builder: () => MockApiService(),
+    builder: () => SupabaseApiService(),
     lazy: false,
   ),
 
