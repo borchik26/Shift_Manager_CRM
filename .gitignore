@@ -1,9 +1,12 @@
 # Исключить все по умолчанию
 /*
 
-# Включить только lib папку
+# Включить lib папку, pubspec.yaml и supabase
 !/lib/
 !/lib/**
+!/pubspec.yaml
+!/supabase/
+!/supabase/**
 
 # Стандартные исключения для Flutter (внутри включенных папок)
 build/
