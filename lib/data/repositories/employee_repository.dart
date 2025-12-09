@@ -36,4 +36,6 @@ class EmployeeRepository {
   Future<List<String>> getAvailableRoles() {
     return _apiService.getAvailableRoles();
   }
+
+  // Helper to get positions with rates via PositionRepository when needed in UI
 }

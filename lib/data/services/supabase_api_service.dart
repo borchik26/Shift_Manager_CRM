@@ -2,6 +2,7 @@ import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart' as app_user;
+import 'package:my_app/data/models/position.dart';
 import 'package:my_app/data/services/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -100,11 +101,29 @@ class SupabaseApiService implements ApiService {
   @override
   Future<Employee> createEmployee(Employee employee) async {
     try {
-      // Note: In Supabase, employees are created via auth.signUp
-      // This method updates an existing profile or creates a placeholder
-      // For now, throw error - employees should register via app
-      throw UnimplementedError(
-          'Создание сотрудников через signUp. Используйте форму регистрации.');
+      // For MVP we insert directly into profiles table (no auth signUp flow)
+      final insertData = {
+        'id': employee.id, // UUID generated on client
+        'full_name': '${employee.firstName} ${employee.lastName}',
+        'email': employee.email,
+        'phone': employee.phone,
+        'position': employee.position,
+        'branch': employee.branch,
+        'status': employee.status,
+        'hire_date': employee.hireDate.toIso8601String(),
+        'avatar_url': employee.avatarUrl,
+        'address': employee.address,
+        'hourly_rate': employee.hourlyRate,
+        'role': 'employee',
+      };
+
+      final response = await _client
+          .from('profiles')
+          .insert(insertData)
+          .select()
+          .single();
+
+      return _profileToEmployee(response);
     } catch (e) {
       throw Exception('Ошибка создания сотрудника: $e');
     }
@@ -261,16 +280,14 @@ class SupabaseApiService implements ApiService {
   @override
   Future<List<String>> getAvailableBranches() async {
     try {
-      // Get unique branches from profiles
       final response = await _client
-          .from('profiles')
-          .select('branch')
-          .not('branch', 'is', null);
+          .from('branches')
+          .select('name')
+          .order('name', ascending: true);
 
       final branches = (response as List)
-          .map((row) => row['branch'] as String)
+          .map((row) => row['name'] as String)
           .where((b) => b.isNotEmpty)
-          .toSet()
           .toList();
 
       branches.sort();
@@ -283,16 +300,14 @@ class SupabaseApiService implements ApiService {
   @override
   Future<List<String>> getAvailableRoles() async {
     try {
-      // Get unique role_title from shifts
       final response = await _client
-          .from('shifts')
-          .select('role_title')
-          .not('role_title', 'is', null);
+          .from('positions')
+          .select('name')
+          .order('name', ascending: true);
 
       final roles = (response as List)
-          .map((row) => row['role_title'] as String)
+          .map((row) => row['name'] as String)
           .where((r) => r.isNotEmpty)
-          .toSet()
           .toList();
 
       roles.sort();
@@ -384,6 +399,95 @@ class SupabaseApiService implements ApiService {
       await _client.from('branches').delete().eq('id', id);
     } catch (e) {
       throw Exception('Ошибка удаления филиала: $e');
+    }
+  }
+
+  // =====================================================
+  // POSITIONS
+  // =====================================================
+
+  @override
+  Future<List<Position>> getPositions() async {
+    try {
+      final response = await _client
+          .from('positions')
+          .select()
+          .order('name', ascending: true);
+
+      return (response as List)
+          .map((json) => Position.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw Exception('Ошибка загрузки должностей: $e');
+    }
+  }
+
+  @override
+  Future<Position?> getPositionById(String id) async {
+    try {
+      final response = await _client
+          .from('positions')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return Position.fromJson(response);
+    } catch (e) {
+      throw Exception('Ошибка загрузки должности: $e');
+    }
+  }
+
+  @override
+  Future<Position> createPosition(Position position) async {
+    try {
+      final insertData = position.toJson()..remove('id');
+
+      final response = await _client
+          .from('positions')
+          .insert(insertData)
+          .select()
+          .single();
+
+      return Position.fromJson(response);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        throw Exception('Должность с таким названием уже существует');
+      }
+      throw Exception('Ошибка создания должности: ${e.message}');
+    } catch (e) {
+      throw Exception('Ошибка создания должности: $e');
+    }
+  }
+
+  @override
+  Future<Position> updatePosition(Position position) async {
+    try {
+      final response = await _client
+          .from('positions')
+          .update(position.toJson())
+          .eq('id', position.id)
+          .select()
+          .single();
+
+      return Position.fromJson(response);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        throw Exception('Должность с таким названием уже существует');
+      }
+      throw Exception('Ошибка обновления должности: ${e.message}');
+    } catch (e) {
+      throw Exception('Ошибка обновления должности: $e');
+    }
+  }
+
+  @override
+  Future<void> deletePosition(String id) async {
+    try {
+      await _client.from('positions').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Ошибка удаления должности: $e');
     }
   }
 

@@ -12,6 +12,7 @@ import 'package:my_app/data/repositories/auth_repository.dart';
 import 'package:my_app/data/repositories/branch_repository.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
 
 final modules = [
   // Core Services
@@ -58,6 +59,10 @@ final modules = [
   ),
   Module<BranchRepository>(
     builder: () => BranchRepository(apiService: locator<ApiService>()),
+    lazy: true,
+  ),
+  Module<PositionRepository>(
+    builder: () => PositionRepository(apiService: locator<ApiService>()),
     lazy: true,
   ),
 ];

@@ -2,6 +2,7 @@ import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart';
+import 'package:my_app/data/models/position.dart';
 import 'package:my_app/data/services/api_service.dart';
 
 /// Mock implementation of ApiService for development
@@ -35,6 +36,7 @@ class MockApiService implements ApiService {
   final List<Employee> _employees = [];
   final List<Shift> _shifts = [];
   final List<Branch> _branches = [];
+  final List<Position> _positions = [];
   User? _currentUser;
 
   MockApiService() {
@@ -42,6 +44,19 @@ class MockApiService implements ApiService {
   }
 
   void _initializeMockData() {
+    // Initialize positions list from available roles
+    for (final role in _availableRoles) {
+      _positions.add(
+        Position(
+          id: 'pos_${role.hashCode.abs()}',
+          name: role,
+          hourlyRate: _hourlyRates[role] ?? 0,
+          createdAt: DateTime.now().subtract(const Duration(days: 30)),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+
     // Generate 50 mock employees with mix of men and women
     final branches = _availableBranches;
     final positions = _availableRoles;
@@ -456,6 +471,71 @@ class MockApiService implements ApiService {
   Future<void> deleteBranch(String id) async {
     await Future.delayed(_delay);
     _branches.removeWhere((b) => b.id == id);
+  }
+
+  // Positions CRUD operations
+  @override
+  Future<List<Position>> getPositions() async {
+    await Future.delayed(_delay);
+    // Return a copy to avoid external mutation
+    return List.unmodifiable(_positions);
+  }
+
+  @override
+  Future<Position?> getPositionById(String id) async {
+    await Future.delayed(_delay);
+    try {
+      return _positions.firstWhere((p) => p.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<Position> createPosition(Position position) async {
+    await Future.delayed(_delay);
+
+    // Ensure unique name
+    if (_positions.any((p) => p.name.toLowerCase() == position.name.toLowerCase())) {
+      throw Exception('Должность с таким названием уже существует');
+    }
+
+    final newPosition = position.copyWith(
+      id: position.id.isEmpty
+          ? 'pos_${DateTime.now().microsecondsSinceEpoch}'
+          : position.id,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    _positions.add(newPosition);
+    return newPosition;
+  }
+
+  @override
+  Future<Position> updatePosition(Position position) async {
+    await Future.delayed(_delay);
+
+    // Ensure unique name except for the same record
+    if (_positions.any(
+      (p) => p.id != position.id && p.name.toLowerCase() == position.name.toLowerCase(),
+    )) {
+      throw Exception('Должность с таким названием уже существует');
+    }
+
+    final index = _positions.indexWhere((p) => p.id == position.id);
+    if (index != -1) {
+      _positions[index] = position.copyWith(updatedAt: DateTime.now());
+      return _positions[index];
+    }
+
+    throw Exception('Должность не найдена');
+  }
+
+  @override
+  Future<void> deletePosition(String id) async {
+    await Future.delayed(_delay);
+    _positions.removeWhere((p) => p.id == id);
   }
 
   /// Get hourly rate for a position

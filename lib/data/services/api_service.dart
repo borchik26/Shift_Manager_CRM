@@ -2,6 +2,7 @@ import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart';
+import 'package:my_app/data/models/position.dart';
 
 /// Abstract interface for API service
 /// All data access should go through this interface
@@ -31,6 +32,13 @@ abstract class ApiService {
   Future<Branch> createBranch(Branch branch);
   Future<Branch> updateBranch(Branch branch);
   Future<void> deleteBranch(String id);
+
+  // Positions
+  Future<List<Position>> getPositions();
+  Future<Position?> getPositionById(String id);
+  Future<Position> createPosition(Position position);
+  Future<Position> updatePosition(Position position);
+  Future<void> deletePosition(String id);
 
   // Filter options / Reference data
   Future<List<String>> getAvailableBranches();

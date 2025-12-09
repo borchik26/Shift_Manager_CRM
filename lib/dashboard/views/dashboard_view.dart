@@ -15,12 +15,14 @@ class DashboardView extends StatelessWidget {
   });
 
   int _getSelectedIndex(String currentPath) {
-    if (currentPath.startsWith('/dashboard/employees')) {
+    if (currentPath.startsWith('/dashboard/branches')) {
       return 1;
-    } else if (currentPath.startsWith('/dashboard/schedule')) {
+    } else if (currentPath.startsWith('/dashboard/positions')) {
       return 2;
-    } else if (currentPath == '/dashboard') {
-      return 0;
+    } else if (currentPath.startsWith('/dashboard/employees')) {
+      return 3;
+    } else if (currentPath.startsWith('/dashboard/schedule')) {
+      return 4;
     }
     return 0;
   }
@@ -63,6 +65,12 @@ class DashboardView extends StatelessWidget {
         icon: Icons.spoke,
         selectedIcon: Icons.settings,
         path: '/dashboard/branches',
+      ),
+      _NavigationItem(
+        label: 'Должности',
+        icon: Icons.badge_outlined,
+        selectedIcon: Icons.badge,
+        path: '/dashboard/positions',
       ),
       _NavigationItem(
         label: 'Сотрудники',

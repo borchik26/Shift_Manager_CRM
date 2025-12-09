@@ -8,6 +8,7 @@ import 'package:my_app/employees_syncfusion/views/profile_view.dart';
 import 'package:my_app/employees_syncfusion/views/employee_syncfusion_view.dart';
 import 'package:my_app/not_found/not_found_view.dart';
 import 'package:my_app/schedule/views/schedule_view.dart';
+import 'package:my_app/positions/position_view.dart';
 
 final routes = [
   // Home -> Redirect to Login
@@ -76,6 +77,15 @@ final routes = [
       key: key,
       currentPath: '/dashboard/branches',
       child: const BranchView(),
+    ),
+    requiresAuth: true,
+  ),
+  RouteEntry(
+    path: '/dashboard/positions',
+    builder: (key, routeData) => DashboardView(
+      key: key,
+      currentPath: '/dashboard/positions',
+      child: const PositionView(),
     ),
     requiresAuth: true,
   ),

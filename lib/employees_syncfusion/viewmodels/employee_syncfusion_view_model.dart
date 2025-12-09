@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
+import 'package:my_app/data/models/position.dart';
 import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dart';
 import 'package:my_app/employees_syncfusion/viewmodels/employee_data_source.dart';
 
 class EmployeeSyncfusionViewModel extends ChangeNotifier {
   final EmployeeRepository _employeeRepository;
   final ShiftRepository _shiftRepository;
+  final BranchRepository _branchRepository;
+  final PositionRepository _positionRepository;
 
   List<EmployeeSyncfusionModel> _employees = [];
   late final EmployeeDataSource _dataSource;
@@ -20,6 +25,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   // Filter options loaded from repository
   List<String> _availableBranches = [];
   List<String> _availableRoles = [];
+  Map<String, double> _positionRates = {};
 
   List<EmployeeSyncfusionModel> get employees => _employees;
   EmployeeDataSource get dataSource => _dataSource;
@@ -31,6 +37,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   int get totalCount => _employees.length;
   List<String> get availableBranches => _availableBranches;
   List<String> get availableRoles => _availableRoles;
+  Map<String, double> get positionRates => _positionRates;
 
   // Get filtered employees list (for mobile cards view)
   List<EmployeeSyncfusionModel> get filteredEmployees {
@@ -66,9 +73,13 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   EmployeeSyncfusionViewModel({
     required EmployeeRepository employeeRepository,
     required ShiftRepository shiftRepository,
+    required BranchRepository branchRepository,
+    required PositionRepository positionRepository,
     required BuildContext context,
   })  : _employeeRepository = employeeRepository,
-        _shiftRepository = shiftRepository {
+        _shiftRepository = shiftRepository,
+        _branchRepository = branchRepository,
+        _positionRepository = positionRepository {
     // Initialize data source once with a wrapper for the callback
     _dataSource = EmployeeDataSource(
       employees: [],
@@ -189,13 +200,23 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   // Load filter options from repository
   Future<void> _loadFilterOptions() async {
     try {
-      _availableBranches = await _employeeRepository.getAvailableBranches();
-      _availableRoles = await _employeeRepository.getAvailableRoles();
+      // Branches from branches table
+      _availableBranches = await _branchRepository
+          .getBranches()
+          .then((list) => list.map((b) => b.name).toList());
+
+      // Positions from positions table (names + rates)
+      final positions = await _positionRepository.getPositions();
+      _availableRoles = positions.map((p) => p.name).toList();
+      _positionRates = {
+        for (final p in positions) p.name: p.hourlyRate,
+      };
       notifyListeners();
     } catch (e) {
       // В случае ошибки используем пустые списки
       _availableBranches = [];
       _availableRoles = [];
+      _positionRates = {};
       notifyListeners();
     }
   }

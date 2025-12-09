@@ -7,7 +7,9 @@ import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
-import 'package:my_app/employees_syncfusion/models/profile_model.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
+import 'package:my_app/data/models/position.dart';
 import 'package:uuid/uuid.dart';
 
 class CreateEmployeeDialog extends StatefulWidget {
@@ -23,7 +25,12 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
   final _branchesState = ValueNotifier<AsyncValue<List<String>>>(
     const AsyncLoading(),
   );
+  final _positionsState = ValueNotifier<AsyncValue<List<Position>>>(
+    const AsyncLoading(),
+  );
   final _employeeRepository = locator<EmployeeRepository>();
+  final _branchRepository = locator<BranchRepository>();
+  final _positionRepository = locator<PositionRepository>();
 
   // Form fields
   String _firstName = '';
@@ -39,14 +46,31 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
   void initState() {
     super.initState();
     _loadBranches();
+    _loadPositions();
   }
 
   Future<void> _loadBranches() async {
     try {
-      final branches = await _employeeRepository.getAvailableBranches();
-      _branchesState.value = AsyncData(branches);
+      final branches = await _branchRepository.getBranches();
+      final branchNames = branches.map((b) => b.name).toList();
+      _branchesState.value = AsyncData(branchNames);
+      if (_selectedBranch == null && branchNames.isNotEmpty) {
+        setState(() => _selectedBranch = branchNames.first);
+      }
     } catch (e, s) {
       _branchesState.value = AsyncError(e.toString(), e, s);
+    }
+  }
+
+  Future<void> _loadPositions() async {
+    try {
+      final positions = await _positionRepository.getPositions();
+      _positionsState.value = AsyncData(positions);
+      if (_selectedPosition == null && positions.isNotEmpty) {
+        setState(() => _selectedPosition = positions.first.name);
+      }
+    } catch (e, s) {
+      _positionsState.value = AsyncError(e.toString(), e, s);
     }
   }
 
@@ -63,7 +87,19 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
   }
 
   double get _currentRate {
-    return EmployeeProfile.positionRates[_selectedPosition] ?? 400.0;
+    final positions = _positionsState.value.dataOrNull;
+    if (positions == null) return 0.0;
+    final match = positions.firstWhere(
+      (p) => p.name == _selectedPosition,
+      orElse: () => Position(
+        id: '',
+        name: '',
+        hourlyRate: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    return match.hourlyRate;
   }
 
   Future<void> _save() async {
@@ -90,6 +126,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
         email: _email?.trim(),
         phone: _phone?.trim(),
         avatarUrl: _avatarUrl?.trim().isNotEmpty == true ? _avatarUrl : null,
+        hourlyRate: _currentRate,
         desiredDaysOff: const [],
       );
 
@@ -113,6 +150,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
   void dispose() {
     _saveState.dispose();
     _branchesState.dispose();
+    _positionsState.dispose();
     super.dispose();
   }
 
@@ -203,34 +241,39 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _selectedPosition,
-                    decoration: InputDecoration(
-                      labelText: 'Должность',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: EmployeeProfile.positionRates.keys.map((position) {
-                      final rate = EmployeeProfile.positionRates[position]!;
-                      return DropdownMenuItem(
-                        value: position,
-                        child: Text(
-                          '$position ($rate ₽/ч)',
-                          overflow: TextOverflow.ellipsis,
+                  ValueListenableBuilder<AsyncValue<List<Position>>>(
+                    valueListenable: _positionsState,
+                    builder: (context, state, child) {
+                      final positions = state.dataOrNull ?? [];
+                      return DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: _selectedPosition,
+                        decoration: InputDecoration(
+                          labelText: 'Должность',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
+                        items: positions.map((position) {
+                          return DropdownMenuItem(
+                            value: position.name,
+                            child: Text(
+                              '${position.name} (${position.hourlyRate.toStringAsFixed(0)} ₽/ч)',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedPosition = value);
+                        },
+                        validator: (value) =>
+                            value == null ? 'Выберите должность' : null,
                       );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedPosition = value);
                     },
-                    validator: (value) =>
-                        value == null ? 'Выберите должность' : null,
                   ),
                   const SizedBox(height: 16),
                   ValueListenableBuilder<AsyncValue<List<String>>>(

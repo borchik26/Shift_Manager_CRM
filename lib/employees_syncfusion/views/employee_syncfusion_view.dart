@@ -7,6 +7,8 @@ import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
 import 'package:my_app/employees_syncfusion/viewmodels/employee_syncfusion_view_model.dart';
 import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dart';
 import 'package:my_app/employees_syncfusion/widgets/create_employee_dialog.dart';
@@ -32,6 +34,8 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
     _viewModel = EmployeeSyncfusionViewModel(
       employeeRepository: locator<EmployeeRepository>(),
       shiftRepository: locator<ShiftRepository>(),
+      branchRepository: locator<BranchRepository>(),
+      positionRepository: locator<PositionRepository>(),
       context: context,
     );
     _viewModel.setDeleteCallback(_onDeleteEmployee);

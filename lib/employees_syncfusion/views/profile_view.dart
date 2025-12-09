@@ -4,6 +4,7 @@ import 'package:my_app/core/ui/constants/kit_colors.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/employees_syncfusion/models/profile_model.dart';
 import 'package:my_app/employees_syncfusion/viewmodels/profile_view_model.dart';
@@ -31,6 +32,7 @@ class _ProfileViewState extends State<ProfileView> {
     super.initState();
     _viewModel = ProfileViewModel(
       employeeRepository: locator<EmployeeRepository>(),
+      positionRepository: locator<PositionRepository>(),
       shiftRepository: locator<ShiftRepository>(),
     );
     _viewModel.loadProfile(widget.employeeId);

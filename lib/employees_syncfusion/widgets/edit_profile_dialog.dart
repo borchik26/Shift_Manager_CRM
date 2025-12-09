@@ -6,6 +6,9 @@ import 'package:my_app/core/utils/validators.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
+import 'package:my_app/data/models/position.dart';
 import 'package:my_app/employees_syncfusion/models/profile_model.dart';
 import 'package:my_app/employees_syncfusion/viewmodels/profile_view_model.dart';
 
@@ -31,7 +34,12 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   final _branchesState = ValueNotifier<AsyncValue<List<String>>>(
     const AsyncLoading(),
   );
+  final _positionsState = ValueNotifier<AsyncValue<List<Position>>>(
+    const AsyncLoading(),
+  );
   final _employeeRepository = locator<EmployeeRepository>();
+  final _branchRepository = locator<BranchRepository>();
+  final _positionRepository = locator<PositionRepository>();
 
   // Form fields
   late String _firstName;
@@ -51,6 +59,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     super.initState();
     _initializeForm();
     _loadBranches();
+    _loadPositions();
   }
 
   Future<void> _initializeForm() async {
@@ -93,10 +102,26 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
   Future<void> _loadBranches() async {
     try {
-      final branches = await _employeeRepository.getAvailableBranches();
-      _branchesState.value = AsyncData(branches);
+      final branches = await _branchRepository.getBranches();
+      final names = branches.map((b) => b.name).toList();
+      _branchesState.value = AsyncData(names);
+      if (_selectedBranch == null && names.isNotEmpty) {
+        setState(() => _selectedBranch = names.first);
+      }
     } catch (e, s) {
       _branchesState.value = AsyncError(e.toString(), e, s);
+    }
+  }
+
+  Future<void> _loadPositions() async {
+    try {
+      final positions = await _positionRepository.getPositions();
+      _positionsState.value = AsyncData(positions);
+      if (_selectedPosition == null && positions.isNotEmpty) {
+        setState(() => _selectedPosition = positions.first.name);
+      }
+    } catch (e, s) {
+      _positionsState.value = AsyncError(e.toString(), e, s);
     }
   }
 
@@ -113,7 +138,19 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   }
 
   double get _currentRate {
-    return EmployeeProfile.positionRates[_selectedPosition] ?? 400.0;
+    final positions = _positionsState.value.dataOrNull;
+    if (positions == null) return 0.0;
+    final match = positions.firstWhere(
+      (p) => p.name == _selectedPosition,
+      orElse: () => Position(
+        id: '',
+        name: '',
+        hourlyRate: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    return match.hourlyRate;
   }
 
   Future<void> _save() async {
@@ -153,6 +190,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   void dispose() {
     _saveState.dispose();
     _branchesState.dispose();
+    _positionsState.dispose();
     super.dispose();
   }
 
@@ -242,30 +280,39 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedPosition,
-                    decoration: InputDecoration(
-                      labelText: 'Должность',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: EmployeeProfile.positionRates.keys.map((position) {
-                      final rate = EmployeeProfile.positionRates[position]!;
-                      return DropdownMenuItem(
-                        value: position,
-                        child: Text('$position ($rate ₽/ч)'),
+                  ValueListenableBuilder<AsyncValue<List<Position>>>(
+                    valueListenable: _positionsState,
+                    builder: (context, state, child) {
+                      final positions = state.dataOrNull ?? [];
+                      return DropdownButtonFormField<String>(
+                        value: _selectedPosition,
+                        decoration: InputDecoration(
+                          labelText: 'Должность',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: positions
+                            .map(
+                              (p) => DropdownMenuItem(
+                                value: p.name,
+                                child: Text(
+                                  '${p.name} (${p.hourlyRate.toStringAsFixed(0)} ₽/ч)',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedPosition = value);
+                        },
+                        validator: (value) =>
+                            value == null ? 'Выберите должность' : null,
                       );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedPosition = value);
                     },
-                    validator: (value) =>
-                        value == null ? 'Выберите должность' : null,
                   ),
                   const SizedBox(height: 16),
                   ValueListenableBuilder<AsyncValue<List<String>>>(

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
+import 'package:my_app/data/models/position.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/employees_syncfusion/models/profile_model.dart';
 import 'package:my_app/core/utils/locator.dart';
@@ -9,6 +11,7 @@ import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 
 class ProfileViewModel {
   final EmployeeRepository _employeeRepository;
+  final PositionRepository _positionRepository;
   final ShiftRepository _shiftRepository;
   final profileState = ValueNotifier<AsyncValue<EmployeeProfile>>(
     const AsyncLoading(),
@@ -21,9 +24,11 @@ class ProfileViewModel {
 
   ProfileViewModel({
     required EmployeeRepository employeeRepository,
+    required PositionRepository positionRepository,
     required ShiftRepository shiftRepository,
-  }) : _employeeRepository = employeeRepository,
-       _shiftRepository = shiftRepository;
+  })  : _employeeRepository = employeeRepository,
+        _positionRepository = positionRepository,
+        _shiftRepository = shiftRepository;
 
   String? get selectedLocationFilter => _selectedLocationFilter;
   ShiftType? get selectedShiftTypeFilter => _selectedShiftTypeFilter;
@@ -140,6 +145,7 @@ class ProfileViewModel {
             employee,
             recentShifts: recentShifts,
             workedHours: workedHours,
+            hourlyRate: employee.hourlyRate,
           ),
         );
       } else {
@@ -173,12 +179,31 @@ class ProfileViewModel {
         return;
       }
 
-      // Update employee position
-      final updatedEmployee = employee.copyWith(position: newPosition);
-      await _employeeRepository.updateEmployee(updatedEmployee);
+      // Get new hourly rate based on position from positions table
+      double newRate = 400.0;
+      try {
+        final positions = await _positionRepository.getPositions();
+        final match = positions.firstWhere(
+          (p) => p.name == newPosition,
+          orElse: () => Position(
+            id: '',
+            name: newPosition,
+            hourlyRate: 400.0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+        newRate = match.hourlyRate;
+      } catch (_) {
+        newRate = 400.0;
+      }
 
-      // Get new hourly rate based on position
-      final newRate = EmployeeProfile.positionRates[newPosition] ?? 400.0;
+      // Update employee position with new rate
+      final updatedEmployee = employee.copyWith(
+        position: newPosition,
+        hourlyRate: newRate,
+      );
+      await _employeeRepository.updateEmployee(updatedEmployee);
 
       // Recalculate salary with new rate
       final updatedProfile = EmployeeProfile(
@@ -243,7 +268,26 @@ class ProfileViewModel {
         return;
       }
 
-      // Create updated employee
+      // Get new hourly rate based on position
+      double newRate = 400.0;
+      try {
+        final positions = await _positionRepository.getPositions();
+        final match = positions.firstWhere(
+          (p) => p.name == position,
+          orElse: () => Position(
+            id: '',
+            name: position,
+            hourlyRate: 400.0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+        newRate = match.hourlyRate;
+      } catch (_) {
+        newRate = 400.0;
+      }
+
+      // Create updated employee with new rate
       final updatedEmployee = employee.copyWith(
         firstName: firstName,
         lastName: lastName,
@@ -254,13 +298,11 @@ class ProfileViewModel {
         email: email,
         phone: phone,
         avatarUrl: avatarUrl,
+        hourlyRate: newRate,
       );
 
       // Update via repository
       await _employeeRepository.updateEmployee(updatedEmployee);
-
-      // Get new hourly rate based on position
-      final newRate = EmployeeProfile.positionRates[position] ?? 400.0;
 
       // Reload shifts to ensure consistency
       final shifts = await _shiftRepository.getShiftsByEmployee(employeeId);
