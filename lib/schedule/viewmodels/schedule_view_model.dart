@@ -3,6 +3,8 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/schedule/models/shift_model.dart';
 import 'package:my_app/schedule/models/date_range_filter.dart';
@@ -19,6 +21,8 @@ import 'package:my_app/core/utils/debouncer.dart';
 class ScheduleViewModel extends ChangeNotifier {
   final EmployeeRepository _employeeRepository;
   final ShiftRepository _shiftRepository;
+  final BranchRepository _branchRepository;
+  final PositionRepository _positionRepository;
 
   // Debouncer for search input (300ms delay)
   final _searchDebouncer = Debouncer(milliseconds: 300);
@@ -28,6 +32,8 @@ class ScheduleViewModel extends ChangeNotifier {
 
   List<ShiftModel> _shifts = [];
   List<Employee> _employees = [];
+  List<String> _branchOptions = [];
+  List<String> _roleOptions = [];
   String? _searchQuery;
   String? _employeeFilter;
   String? _locationFilter;
@@ -66,15 +72,28 @@ class ScheduleViewModel extends ChangeNotifier {
   ScheduleViewModel({
     required EmployeeRepository employeeRepository,
     required ShiftRepository shiftRepository,
+    required BranchRepository branchRepository,
+    required PositionRepository positionRepository,
   }) : _employeeRepository = employeeRepository,
-       _shiftRepository = shiftRepository {
+       _shiftRepository = shiftRepository,
+       _branchRepository = branchRepository,
+       _positionRepository = positionRepository {
     _loadData();
+    // Preload reference data; UI will refresh on each dropdown tap
+    refreshBranches();
+    refreshRoles();
   }
 
   final state = ValueNotifier<AsyncValue<List<ShiftModel>>>(
     const AsyncLoading(),
   );
   final employeesState = ValueNotifier<AsyncValue<List<Employee>>>(
+    const AsyncLoading(),
+  );
+  final branchesState = ValueNotifier<AsyncValue<List<String>>>(
+    const AsyncLoading(),
+  );
+  final rolesState = ValueNotifier<AsyncValue<List<String>>>(
     const AsyncLoading(),
   );
 
@@ -349,6 +368,38 @@ class ScheduleViewModel extends ChangeNotifier {
     _updateFilteredList();
   }
 
+  /// Load fresh branches from repository (Supabase)
+  Future<void> refreshBranches() async {
+    branchesState.value = const AsyncLoading();
+    try {
+      final branches = await _branchRepository.getBranches();
+      _branchOptions = branches.map((b) => b.name).toList();
+      _branchOptions.sort();
+      branchesState.value = AsyncData(_branchOptions);
+    } catch (e, s) {
+      branchesState.value = AsyncError(e.toString(), e, s);
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(message: 'Не удалось загрузить филиалы: $e'),
+      );
+    }
+  }
+
+  /// Load fresh roles from repository (Supabase)
+  Future<void> refreshRoles() async {
+    rolesState.value = const AsyncLoading();
+    try {
+      final positions = await _positionRepository.getPositions();
+      _roleOptions = positions.map((p) => p.name).toList();
+      _roleOptions.sort();
+      rolesState.value = AsyncData(_roleOptions);
+    } catch (e, s) {
+      rolesState.value = AsyncError(e.toString(), e, s);
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(message: 'Не удалось загрузить должности: $e'),
+      );
+    }
+  }
+
   /// Change calendar view type (Day/Week/Month)
   void changeViewType(ScheduleViewType newViewType) {
     if (_currentViewType != newViewType) {
@@ -388,20 +439,15 @@ class ScheduleViewModel extends ChangeNotifier {
   }
 
   List<String> getLocations() {
-    return ['ТЦ Мега', 'Центр', 'Аэропорт'];
+    return _branchOptions;
   }
 
   List<String> getRoles() {
-    return ['Уборщица', 'Кассир', 'Повар', 'Менеджер'];
+    return _roleOptions;
   }
 
   List<String> getBranches() {
-    // Get unique branches from employees
-    final branches = <String>{};
-    for (final employee in _employees) {
-      branches.add(employee.branch);
-    }
-    return branches.toList();
+    return _branchOptions;
   }
 
   /// Get list of unique professions from current shifts (for mobile grid view)
@@ -636,6 +682,8 @@ class ScheduleViewModel extends ChangeNotifier {
     _searchDebouncer.dispose();
     state.dispose();
     employeesState.dispose();
+    branchesState.dispose();
+    rolesState.dispose();
     super.dispose();
   }
 }

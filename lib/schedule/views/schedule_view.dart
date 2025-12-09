@@ -5,6 +5,8 @@ import 'package:my_app/core/utils/responsive_helper.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
 import 'package:my_app/schedule/models/shift_model.dart';
 import 'package:my_app/schedule/viewmodels/schedule_view_model.dart';
 import 'package:my_app/schedule/views/mobile_schedule_grid_view.dart';
@@ -35,6 +37,8 @@ class _ScheduleViewState extends State<ScheduleView> {
     _viewModel = ScheduleViewModel(
       shiftRepository: locator<ShiftRepository>(),
       employeeRepository: locator<EmployeeRepository>(),
+      branchRepository: locator<BranchRepository>(),
+      positionRepository: locator<PositionRepository>(),
     );
   }
 
@@ -116,7 +120,11 @@ class _ScheduleViewState extends State<ScheduleView> {
 
               // Filter button
               OutlinedButton.icon(
-                onPressed: () => _showMobileFiltersSheet(context),
+                onPressed: () {
+                  _viewModel.refreshBranches();
+                  _viewModel.refreshRoles();
+                  _showMobileFiltersSheet(context);
+                },
                 icon: ListenableBuilder(
                   listenable: _viewModel,
                   builder: (context, _) {
@@ -496,50 +504,68 @@ class _ScheduleViewState extends State<ScheduleView> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                // Branch filter
-                ListenableBuilder(
-                  listenable: _viewModel,
-                  builder: (context, _) {
+                // Branch filter (mobile)
+                ValueListenableBuilder<AsyncValue<List<String>>>(
+                  valueListenable: _viewModel.branchesState,
+                  builder: (context, state, _) {
+                    final items = state.dataOrNull ?? const <String>[];
+                    final disabled = state.isLoading || state.hasError || items.isEmpty;
                     return DropdownButtonFormField<String>(
-                      initialValue: _selectedBranch,
-                      decoration: const InputDecoration(
-                        labelText: 'Филиал',
-                        border: OutlineInputBorder(),
+                      onTap: _viewModel.refreshBranches,
+                      value: disabled ? null : _selectedBranch,
+                      decoration: InputDecoration(
+                        labelText: state.isLoading
+                            ? 'Загрузка...'
+                            : state.hasError
+                                ? 'Ошибка загрузки'
+                                : 'Филиал',
+                        border: const OutlineInputBorder(),
                       ),
-                      items: _viewModel.getBranches().map((branch) {
-                        return DropdownMenuItem(
-                          value: branch,
-                          child: Text(branch),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedBranch = value);
-                        _viewModel.setLocationFilter(value);
-                      },
+                      items: items
+                          .map((branch) => DropdownMenuItem(
+                                value: branch,
+                                child: Text(branch),
+                              ))
+                          .toList(),
+                      onChanged: disabled
+                          ? null
+                          : (value) {
+                              setState(() => _selectedBranch = value);
+                              _viewModel.setLocationFilter(value);
+                            },
                     );
                   },
                 ),
                 const SizedBox(height: 12),
-                // Role filter
-                ListenableBuilder(
-                  listenable: _viewModel,
-                  builder: (context, _) {
+                // Role filter (mobile)
+                ValueListenableBuilder<AsyncValue<List<String>>>(
+                  valueListenable: _viewModel.rolesState,
+                  builder: (context, state, _) {
+                    final items = state.dataOrNull ?? const <String>[];
+                    final disabled = state.isLoading || state.hasError || items.isEmpty;
                     return DropdownButtonFormField<String>(
-                      initialValue: _selectedRole,
-                      decoration: const InputDecoration(
-                        labelText: 'Должность',
-                        border: OutlineInputBorder(),
+                      onTap: _viewModel.refreshRoles,
+                      value: disabled ? null : _selectedRole,
+                      decoration: InputDecoration(
+                        labelText: state.isLoading
+                            ? 'Загрузка...'
+                            : state.hasError
+                                ? 'Ошибка загрузки'
+                                : 'Должность',
+                        border: const OutlineInputBorder(),
                       ),
-                      items: _viewModel.getRoles().map((role) {
-                        return DropdownMenuItem(
-                          value: role,
-                          child: Text(role),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedRole = value);
-                        _viewModel.setRoleFilter(value);
-                      },
+                      items: items
+                          .map((role) => DropdownMenuItem(
+                                value: role,
+                                child: Text(role),
+                              ))
+                          .toList(),
+                      onChanged: disabled
+                          ? null
+                          : (value) {
+                              setState(() => _selectedRole = value);
+                              _viewModel.setRoleFilter(value);
+                            },
                     );
                   },
                 ),
@@ -1086,80 +1112,114 @@ class _ScheduleViewState extends State<ScheduleView> {
   }
 
   Widget _buildBranchDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: DropdownButton<String>(
-        value: _selectedBranch,
-        isDense: true,
-        hint: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🏢', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
-            Text(
-              'Филиал',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blue.shade700,
-                fontWeight: FontWeight.w600,
-              ),
+    return ValueListenableBuilder<AsyncValue<List<String>>>(
+      valueListenable: _viewModel.branchesState,
+      builder: (context, state, _) {
+        final isDisabled = state.isLoading || state.hasError || (state.dataOrNull?.isEmpty ?? true);
+        final items = state.dataOrNull ?? const <String>[];
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButton<String>(
+            value: isDisabled ? null : _selectedBranch,
+            isDense: true,
+            onTap: _viewModel.refreshBranches,
+            hint: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🏢', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                Text(
+                  state.isLoading
+                      ? 'Загрузка...'
+                      : state.hasError
+                          ? 'Ошибка'
+                          : 'Филиал',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: state.hasError
+                        ? Colors.red
+                        : Colors.blue.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        underline: const SizedBox(),
-        icon: const SizedBox(),
-        items: _viewModel.getBranches().map((branch) {
-          return DropdownMenuItem(value: branch, child: Text(branch));
-        }).toList(),
-        onChanged: (value) {
-          setState(() => _selectedBranch = value);
-          _viewModel.setLocationFilter(value);
-        },
-      ),
+            underline: const SizedBox(),
+            icon: const SizedBox(),
+            items: items.map((branch) {
+              return DropdownMenuItem(value: branch, child: Text(branch));
+            }).toList(),
+            onChanged: isDisabled
+                ? null
+                : (value) {
+                    setState(() => _selectedBranch = value);
+                    _viewModel.setLocationFilter(value);
+                  },
+          ),
+        );
+      },
     );
   }
 
   Widget _buildRoleDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: DropdownButton<String>(
-        value: _selectedRole,
-        isDense: true,
-        hint: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('👔', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
-            Text(
-              'Должность',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blue.shade700,
-                fontWeight: FontWeight.w600,
-              ),
+    return ValueListenableBuilder<AsyncValue<List<String>>>(
+      valueListenable: _viewModel.rolesState,
+      builder: (context, state, _) {
+        final isDisabled = state.isLoading || state.hasError || (state.dataOrNull?.isEmpty ?? true);
+        final items = state.dataOrNull ?? const <String>[];
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButton<String>(
+            value: isDisabled ? null : _selectedRole,
+            isDense: true,
+            onTap: _viewModel.refreshRoles,
+            hint: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('👔', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                Text(
+                  state.isLoading
+                      ? 'Загрузка...'
+                      : state.hasError
+                          ? 'Ошибка'
+                          : 'Должность',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: state.hasError
+                        ? Colors.red
+                        : Colors.blue.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        underline: const SizedBox(),
-        icon: const SizedBox(),
-        items: _viewModel.getRoles().map((role) {
-          return DropdownMenuItem(value: role, child: Text(role));
-        }).toList(),
-        onChanged: (value) {
-          setState(() => _selectedRole = value);
-          _viewModel.setRoleFilter(value);
-        },
-      ),
+            underline: const SizedBox(),
+            icon: const SizedBox(),
+            items: items.map((role) {
+              return DropdownMenuItem(value: role, child: Text(role));
+            }).toList(),
+            onChanged: isDisabled
+                ? null
+                : (value) {
+                    setState(() => _selectedRole = value);
+                    _viewModel.setRoleFilter(value);
+                  },
+          ),
+        );
+      },
     );
   }
 }

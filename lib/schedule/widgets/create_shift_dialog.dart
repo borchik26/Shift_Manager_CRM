@@ -4,21 +4,22 @@ import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
+import 'package:my_app/data/models/position.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
+import 'package:my_app/data/repositories/position_repository.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 import 'package:my_app/schedule/models/shift_model.dart';
 import 'package:my_app/schedule/utils/shift_conflict_checker.dart';
 import 'package:my_app/schedule/widgets/conflict_warning_box.dart';
-import 'package:my_app/schedule/constants/schedule_constants.dart';
 import 'package:uuid/uuid.dart';
 
 class CreateShiftDialog extends StatefulWidget {
   final ShiftModel? existingShift;
   final DateTime? initialDate; // Pre-fill date when creating from mobile grid
-  final String?
-  initialProfession; // Pre-fill profession when creating from mobile grid
+  final String? initialProfession; // Pre-fill profession when creating from mobile grid
 
   const CreateShiftDialog({
     super.key,
@@ -35,12 +36,20 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
   final _formKey = GlobalKey<FormState>();
   final _shiftRepository = locator<ShiftRepository>();
   final _employeeRepository = locator<EmployeeRepository>();
+  final _branchRepository = locator<BranchRepository>();
+  final _positionRepository = locator<PositionRepository>();
 
   final _state = ValueNotifier<AsyncValue<void>>(const AsyncData(null));
   final _employeesState = ValueNotifier<AsyncValue<List<Employee>>>(
     const AsyncLoading(),
   );
   final _shiftsState = ValueNotifier<AsyncValue<List<Shift>>>(
+    const AsyncLoading(),
+  );
+  final _branchesState = ValueNotifier<AsyncValue<List<String>>>(
+    const AsyncLoading(),
+  );
+  final _positionsState = ValueNotifier<AsyncValue<List<Position>>>(
     const AsyncLoading(),
   );
 
@@ -55,9 +64,31 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
 
   List<ShiftConflict> _currentConflicts = [];
 
-  // Use constants from ScheduleConstants
-  final List<String> _roles = ScheduleConstants.roles;
-  final List<String> _branches = ScheduleConstants.branches;
+  Map<String, double> _positionRates = {};
+  String? _resolveBranch(String? desired) {
+    final branches = _branchesState.value.dataOrNull ?? const <String>[];
+    if (desired != null && branches.contains(desired)) return desired;
+    if (branches.isNotEmpty) return branches.first;
+    return null;
+  }
+
+  void _syncSelectionWithEmployee() {
+    if (_selectedEmployeeId == null) return;
+    final employees = _employeesState.value.dataOrNull ?? [];
+    Employee? employee;
+    try {
+      employee = employees.firstWhere((e) => e.id == _selectedEmployeeId);
+    } catch (_) {
+      employee = null;
+    }
+    if (employee == null) return;
+
+    final resolvedBranch = _resolveBranch(employee.branch);
+    setState(() {
+      _selectedRole = employee?.position ?? _selectedRole;
+      _selectedBranch = resolvedBranch;
+    });
+  }
 
   /// Build map of employee ID -> desired days off for conflict checking
   Map<String, List<DesiredDayOff>> _getDesiredDaysOffMap() {
@@ -74,6 +105,8 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     super.initState();
     _loadEmployees();
     _loadShifts();
+    _loadBranches();
+    _loadPositions();
 
     // Pre-fill form if editing existing shift
     if (widget.existingShift != null) {
@@ -82,8 +115,9 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
       _selectedEmployeeId = shift.employeeId != 'unassigned'
           ? shift.employeeId
           : null;
-      // Only set role if it exists in the roles list
-      _selectedRole = _roles.contains(shift.roleTitle) ? shift.roleTitle : null;
+      _selectedRole = shift.roleTitle?.isNotEmpty == true
+          ? shift.roleTitle
+          : null;
       _selectedBranch = shift.location;
       _selectedDate = DateTime(
         shift.startTime.year,
@@ -107,7 +141,9 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
         _selectedDate = widget.initialDate!;
       }
       if (widget.initialProfession != null &&
-          _roles.contains(widget.initialProfession)) {
+          _positionsState.value.dataOrNull
+                  ?.any((p) => p.name == widget.initialProfession) ==
+              true) {
         _selectedRole = widget.initialProfession;
       }
     }
@@ -117,6 +153,8 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     try {
       final employees = await _employeeRepository.getEmployees();
       _employeesState.value = AsyncData(employees);
+      _syncSelectionWithEmployee();
+      // If no employees, keep optional selection but allow free shifts
     } catch (e, s) {
       _employeesState.value = AsyncError(e.toString(), e, s);
     }
@@ -131,11 +169,66 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     }
   }
 
+  Future<void> _loadBranches() async {
+    _branchesState.value = const AsyncLoading();
+    try {
+      final branches = await _branchRepository.getBranches();
+      final names = branches.map((b) => b.name).toList()..sort();
+      _branchesState.value = AsyncData(names);
+      _syncSelectionWithEmployee();
+      if (_selectedBranch == null && names.isNotEmpty) {
+        setState(() => _selectedBranch = names.first);
+      } else if (_selectedBranch != null && names.isNotEmpty && !names.contains(_selectedBranch)) {
+        setState(() => _selectedBranch = names.first);
+      } else if (names.isEmpty) {
+        setState(() => _selectedBranch = null);
+      }
+    } catch (e, s) {
+      _branchesState.value = AsyncError(e.toString(), e, s);
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(message: 'Не удалось загрузить филиалы: $e'),
+      );
+    }
+  }
+
+  Future<void> _loadPositions() async {
+    _positionsState.value = const AsyncLoading();
+    try {
+      final positions = await _positionRepository.getPositions();
+      _positionRates = {for (final p in positions) p.name: p.hourlyRate};
+      _positionsState.value = AsyncData(positions);
+
+      // Apply initial profession if provided and not yet set
+      if (_selectedRole == null &&
+          widget.initialProfession != null &&
+          positions.any((p) => p.name == widget.initialProfession)) {
+        setState(() => _selectedRole = widget.initialProfession);
+      } else if (_selectedEmployeeId == null) {
+        if (_selectedRole == null && positions.isNotEmpty) {
+          setState(() => _selectedRole = positions.first.name);
+        } else if (_selectedRole != null &&
+            positions.isNotEmpty &&
+            positions.every((p) => p.name != _selectedRole)) {
+          setState(() => _selectedRole = positions.first.name);
+        } else if (positions.isEmpty) {
+          setState(() => _selectedRole = null);
+        }
+      }
+    } catch (e, s) {
+      _positionsState.value = AsyncError(e.toString(), e, s);
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(message: 'Не удалось загрузить должности: $e'),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _state.dispose();
     _employeesState.dispose();
     _shiftsState.dispose();
+    _branchesState.dispose();
+    _positionsState.dispose();
     _preferencesController.dispose();
     super.dispose();
   }
@@ -177,15 +270,45 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     return end - start;
   }
 
-  /// Get hourly rate for a role
-  double _getHourlyRateForRole(String? role) {
-    const hourlyRates = {
-      'Уборщица': 250.0,
-      'Кассир': 400.0,
-      'Повар': 600.0,
-      'Менеджер': 840.0,
-    };
-    return hourlyRates[role] ?? 400.0;
+  double get _currentRate {
+    if (_selectedRole == null) return 0.0;
+    return _positionRates[_selectedRole] ?? 0.0;
+  }
+
+  void _onEmployeeSelected(String? employeeId) {
+    setState(() {
+      _selectedEmployeeId = employeeId;
+      _ignoreWarning = false;
+    });
+
+    if ((_positionsState.value.dataOrNull?.isEmpty ?? true) &&
+        !_positionsState.value.isLoading) {
+      _loadPositions();
+    }
+
+    if (employeeId == null) {
+      _checkConflicts();
+      return;
+    }
+
+    final employees = _employeesState.value.dataOrNull ?? [];
+    Employee? employee;
+    try {
+      employee = employees.firstWhere((e) => e.id == employeeId);
+    } catch (_) {
+      employee = null;
+    }
+
+    if (employee != null) {
+      final selectedEmployee = employee;
+      final resolvedBranch = _resolveBranch(selectedEmployee.branch);
+      setState(() {
+        _selectedRole = selectedEmployee.position;
+        _selectedBranch = resolvedBranch;
+      });
+    }
+
+    _checkConflicts();
   }
 
   /// Check conflicts for the current shift configuration
@@ -227,7 +350,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
       roleTitle: _selectedRole ?? '',
       location: _selectedBranch!,
       color: Colors.blue,
-      hourlyRate: _getHourlyRateForRole(_selectedRole),
+      hourlyRate: _currentRate,
     );
 
     // Convert Shift to ShiftModel for conflict checking
@@ -252,6 +375,46 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final hasBranches = _branchesState.value.dataOrNull?.isNotEmpty ?? false;
+    final hasPositions = _positionsState.value.dataOrNull?.isNotEmpty ?? false;
+    final hasEmployees = _employeesState.value.dataOrNull?.isNotEmpty ?? false;
+
+    if (!hasBranches || !hasPositions) {
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(
+          message: 'Добавьте должность и филиал перед созданием смены',
+        ),
+      );
+      return;
+    }
+
+    if (_selectedEmployeeId != null && !hasEmployees) {
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(
+          message: 'Нет сотрудников для назначения смены',
+        ),
+      );
+      return;
+    }
+
+    if (_selectedEmployeeId != null && _selectedRole == null) {
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(
+          message: 'У выбранного сотрудника нет должности',
+        ),
+      );
+      return;
+    }
+
+    if (_selectedEmployeeId == null && _selectedRole == null) {
+      locator<NotifyService>().setToastEvent(
+        ToastEventError(
+          message: 'Для свободной смены выберите должность',
+        ),
+      );
+      return;
+    }
 
     // Check for hard errors
     final hasHardErrors = ShiftConflictChecker.hasHardErrors(_currentConflicts);
@@ -305,15 +468,15 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
         employeeId:
             _selectedEmployeeId ??
             'unassigned', // Use 'unassigned' if no employee selected
-        location: _selectedBranch ?? 'Центр',
+        location: _selectedBranch!,
         startTime: startDateTime,
         endTime: endDateTime,
-        status: 'scheduled',
+        status: 'pending', // will be overridden by DB default/constraint in service
         employeePreferences: _preferencesController.text.trim().isNotEmpty
             ? _preferencesController.text.trim()
             : null,
         roleTitle: _selectedRole, // Save selected role
-        hourlyRate: _getHourlyRateForRole(_selectedRole),
+        hourlyRate: _currentRate,
       );
 
       // Call create or update based on whether we're editing
@@ -362,245 +525,299 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      widget.existingShift != null
-                          ? 'Редактировать смену'
-                          : 'Создать смену',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        widget.existingShift != null
+                            ? 'Редактировать смену'
+                            : 'Создать смену',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                ValueListenableBuilder<AsyncValue<List<Employee>>>(
-                  valueListenable: _employeesState,
-                  builder: (context, state, child) {
-                    if (state.isLoading) {
-                      return const LinearProgressIndicator();
-                    }
-
-                    final employees = state.dataOrNull ?? [];
-
-                    return DropdownButtonFormField<String>(
-                      initialValue: _selectedEmployeeId,
-                      decoration: const InputDecoration(
-                        labelText: 'Сотрудник',
-                        hintText: 'Выберите сотрудника',
-                        border: OutlineInputBorder(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                      items: employees.map((e) {
-                        return DropdownMenuItem(
-                          value: e.id,
-                          child: Text('${e.firstName} ${e.lastName}'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedEmployeeId = value;
-                          _ignoreWarning = false;
-                        });
-                        _checkConflicts();
-                      },
-                      // Employee is optional - can be null for unassigned shifts
-                      validator: null,
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _selectedRole,
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ValueListenableBuilder<AsyncValue<List<Employee>>>(
+                    valueListenable: _employeesState,
+                    builder: (context, state, child) {
+                      if (state.isLoading) {
+                        return const LinearProgressIndicator();
+                      }
+
+                      final employees = state.dataOrNull ?? [];
+
+                      return DropdownButtonFormField<String>(
+                        value: (state.hasError || employees.isEmpty)
+                            ? null
+                            : _selectedEmployeeId,
                         decoration: const InputDecoration(
-                          labelText: 'Должность',
+                          labelText: 'Сотрудник',
+                          hintText: 'Выберите сотрудника',
                           border: OutlineInputBorder(),
                         ),
-                        items: _roles.map((r) {
+                        items: employees.map((e) {
                           return DropdownMenuItem(
-                            value: r,
-                            child: Text(
-                              r,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            value: e.id,
+                            child: Text('${e.firstName} ${e.lastName}'),
                           );
                         }).toList(),
-                        onChanged: (value) =>
-                            setState(() => _selectedRole = value),
-                        validator: (value) =>
-                            value == null ? 'Выберите должность' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _selectedBranch,
-                        decoration: const InputDecoration(
-                          labelText: 'Филиал',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _branches.map((b) {
-                          return DropdownMenuItem(
-                            value: b,
-                            child: Text(
-                              b,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() => _selectedBranch = value);
-                          _checkConflicts();
-                        },
-                        validator: (value) =>
-                            value == null ? 'Выберите филиал' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: _selectDate,
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Дата',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                    child: Text(DateFormat('dd.MM.yyyy').format(_selectedDate)),
+                        onChanged: (state.hasError || employees.isEmpty)
+                            ? null
+                            : _onEmployeeSelected,
+                        // Employee is optional - can be null for unassigned shifts
+                        validator: null,
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(true),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Начало',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.access_time),
-                          ),
-                          child: Text(_startTime.format(context)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(false),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Конец',
-                            border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.access_time),
-                          ),
-                          child: Text(_endTime.format(context)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Длительность: ${_duration.toStringAsFixed(1)} ч',
-                  style: TextStyle(
-                    color: _duration < 2 ? Colors.red : Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Employee Preferences field
-                TextField(
-                  controller: _preferencesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Пожелания сотрудника',
-                    hintText: 'Напр: предпочитает утренние смены',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.comment_outlined),
-                    helperText: 'Необязательное поле',
-                  ),
-                  maxLines: 2,
-                  maxLength: 100,
-                ),
-
-                // Show conflicts using new ConflictWarningBox component
-                if (_currentConflicts.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  ConflictWarningBox(
-                    conflicts: _currentConflicts,
-                    showIgnoreOption: true,
-                    ignoreWarning: _ignoreWarning,
-                    onIgnoreChanged: (value) {
-                      setState(() => _ignoreWarning = value);
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _selectedEmployeeId != null
+                            ? InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Должность',
+                                  border: OutlineInputBorder(),
+                                ),
+                                child: Text(
+                                  _selectedRole ?? '—',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )
+                            : ValueListenableBuilder<AsyncValue<List<Position>>>(
+                                valueListenable: _positionsState,
+                                builder: (context, state, _) {
+                                  final items = state.dataOrNull ?? const <Position>[];
+                                  final disabled = state.isLoading ||
+                                      state.hasError ||
+                                      items.isEmpty;
+                                  return DropdownButtonFormField<String>(
+                                    isExpanded: true,
+                                    value: disabled ? null : _selectedRole,
+                                    onTap: _loadPositions,
+                                    decoration: InputDecoration(
+                                      labelText: state.isLoading
+                                          ? 'Загрузка...'
+                                          : state.hasError
+                                              ? 'Ошибка загрузки'
+                                              : 'Должность',
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    items: items
+                                        .map(
+                                          (p) => DropdownMenuItem(
+                                            value: p.name,
+                                            child: Text(
+                                              '${p.name} (${p.hourlyRate.toStringAsFixed(0)} ₽/ч)',
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: disabled
+                                        ? null
+                                        : (value) {
+                                            setState(() => _selectedRole = value);
+                                            _checkConflicts();
+                                          },
+                                    validator: (value) =>
+                                        value == null ? 'Выберите должность' : null,
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                      child: ValueListenableBuilder<AsyncValue<List<String>>>(
+                        valueListenable: _branchesState,
+                        builder: (context, state, _) {
+                          final items = state.dataOrNull ?? const <String>[];
+                          final disabled = state.isLoading ||
+                              state.hasError ||
+                              items.isEmpty;
+                          final value =
+                              (!disabled && items.contains(_selectedBranch))
+                                  ? _selectedBranch
+                                  : null;
+                          return DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            value: value,
+                            onTap: _loadBranches,
+                            decoration: InputDecoration(
+                              labelText: state.isLoading
+                                  ? 'Загрузка...'
+                                  : state.hasError
+                                        ? 'Ошибка загрузки'
+                                        : 'Филиал',
+                                border: const OutlineInputBorder(),
+                              ),
+                              items: items
+                                  .map(
+                                    (b) => DropdownMenuItem(
+                                      value: b,
+                                      child: Text(
+                                        b,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: disabled
+                                  ? null
+                                  : (value) {
+                                      setState(() => _selectedBranch = value);
+                                      _checkConflicts();
+                                    },
+                              validator: (value) =>
+                                  value == null ? 'Выберите филиал' : null,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: _selectDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Дата',
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      child: Text(DateFormat('dd.MM.yyyy').format(_selectedDate)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _selectTime(true),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Начало',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.access_time),
+                            ),
+                            child: Text(_startTime.format(context)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _selectTime(false),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Конец',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.access_time),
+                            ),
+                            child: Text(_endTime.format(context)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Длительность: ${_duration.toStringAsFixed(1)} ч',
+                    style: TextStyle(
+                      color: _duration < 2 ? Colors.red : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _preferencesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Пожелания сотрудника',
+                      hintText: 'Напр: предпочитает утренние смены',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.comment_outlined),
+                      helperText: 'Необязательное поле',
+                    ),
+                    maxLines: 2,
+                    maxLength: 100,
+                  ),
+                  if (_currentConflicts.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    ConflictWarningBox(
+                      conflicts: _currentConflicts,
+                      showIgnoreOption: true,
+                      ignoreWarning: _ignoreWarning,
+                      onIgnoreChanged: (value) {
+                        setState(() => _ignoreWarning = value);
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  ValueListenableBuilder<AsyncValue<void>>(
+                    valueListenable: _state,
+                    builder: (context, state, child) {
+                      if (state.hasError) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            'Ошибка: ${state.errorOrNull}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }
+
+                      final hasBranches =
+                          _branchesState.value.dataOrNull?.isNotEmpty ?? false;
+                      final hasPositions =
+                          _positionsState.value.dataOrNull?.isNotEmpty ?? false;
+
+                      final shouldDisable =
+                          state.isLoading ||
+                          (ShiftConflictChecker.hasHardErrors(
+                            _currentConflicts,
+                          )) ||
+                          (ShiftConflictChecker.hasWarnings(
+                                _currentConflicts,
+                              ) &&
+                              !_ignoreWarning) ||
+                          !hasBranches ||
+                          !hasPositions;
+
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: shouldDisable ? null : _save,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: state.isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('Сохранить'),
+                        ),
+                      );
                     },
                   ),
                 ],
-                const SizedBox(height: 24),
-                ValueListenableBuilder<AsyncValue<void>>(
-                  valueListenable: _state,
-                  builder: (context, state, child) {
-                    if (state.hasError) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          'Ошибка: ${state.errorOrNull}',
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      );
-                    }
-
-                    return SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed:
-                            state.isLoading ||
-                                (ShiftConflictChecker.hasHardErrors(
-                                  _currentConflicts,
-                                )) ||
-                                (ShiftConflictChecker.hasWarnings(
-                                      _currentConflicts,
-                                    ) &&
-                                    !_ignoreWarning)
-                            ? null
-                            : _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: state.isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Сохранить'),
-                      ),
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }

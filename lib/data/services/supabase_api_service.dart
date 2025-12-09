@@ -227,6 +227,8 @@ class SupabaseApiService implements ApiService {
       final insertData = shift.toJson();
       // Remove id for insert (Supabase generates it)
       insertData.remove('id');
+      // Let DB apply default/valid status
+      insertData.remove('status');
 
       final response =
           await _client.from('shifts').insert(insertData).select().single();
