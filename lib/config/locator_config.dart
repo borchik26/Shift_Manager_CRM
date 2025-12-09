@@ -9,6 +9,7 @@ import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/data/services/api_service.dart';
 import 'package:my_app/data/services/supabase_api_service.dart'; // ✅ ADDED: Production API
 import 'package:my_app/data/repositories/auth_repository.dart';
+import 'package:my_app/data/repositories/branch_repository.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 
@@ -53,6 +54,10 @@ final modules = [
   ),
   Module<ShiftRepository>(
     builder: () => ShiftRepository(apiService: locator<ApiService>()),
+    lazy: true,
+  ),
+  Module<BranchRepository>(
+    builder: () => BranchRepository(apiService: locator<ApiService>()),
     lazy: true,
   ),
 ];

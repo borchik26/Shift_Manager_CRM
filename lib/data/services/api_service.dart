@@ -1,3 +1,4 @@
+import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart';
@@ -23,6 +24,13 @@ abstract class ApiService {
   Future<Shift> createShift(Shift shift);
   Future<Shift> updateShift(Shift shift);
   Future<void> deleteShift(String id);
+
+  // Branches
+  Future<List<Branch>> getBranches();
+  Future<Branch?> getBranchById(String id);
+  Future<Branch> createBranch(Branch branch);
+  Future<Branch> updateBranch(Branch branch);
+  Future<void> deleteBranch(String id);
 
   // Filter options / Reference data
   Future<List<String>> getAvailableBranches();

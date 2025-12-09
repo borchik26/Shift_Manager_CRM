@@ -59,6 +59,12 @@ class DashboardView extends StatelessWidget {
         path: '/dashboard',
       ),
       _NavigationItem(
+        label: 'Филиалы',
+        icon: Icons.spoke,
+        selectedIcon: Icons.settings,
+        path: '/dashboard/branches',
+      ),
+      _NavigationItem(
         label: 'Сотрудники',
         icon: Icons.people_outline,
         selectedIcon: Icons.people,

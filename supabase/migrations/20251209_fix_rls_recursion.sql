@@ -405,84 +405,92 @@ COMMENT ON COLUMN "public"."shifts"."hourly_rate" IS 'Hourly rate for this speci
 
 
 
-ALTER TABLE ONLY "public"."audit_logs"
-    ADD CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id");
+-- Add PRIMARY KEY constraints (skip if already exist)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'audit_logs_pkey') THEN
+    ALTER TABLE ONLY "public"."audit_logs" ADD CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_email_key') THEN
+    ALTER TABLE ONLY "public"."profiles" ADD CONSTRAINT "profiles_email_key" UNIQUE ("email");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_pkey') THEN
+    ALTER TABLE ONLY "public"."profiles" ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'shift_swaps_pkey') THEN
+    ALTER TABLE ONLY "public"."shift_swaps" ADD CONSTRAINT "shift_swaps_pkey" PRIMARY KEY ("id");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'shifts_pkey') THEN
+    ALTER TABLE ONLY "public"."shifts" ADD CONSTRAINT "shifts_pkey" PRIMARY KEY ("id");
+  END IF;
+END $$;
 
 
 
-ALTER TABLE ONLY "public"."profiles"
-    ADD CONSTRAINT "profiles_email_key" UNIQUE ("email");
+CREATE INDEX IF NOT EXISTS "idx_audit_logs_created_at" ON "public"."audit_logs" USING "btree" ("created_at");
 
 
 
-ALTER TABLE ONLY "public"."profiles"
-    ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
+CREATE INDEX IF NOT EXISTS "idx_audit_logs_table_name" ON "public"."audit_logs" USING "btree" ("table_name");
 
 
 
-ALTER TABLE ONLY "public"."shift_swaps"
-    ADD CONSTRAINT "shift_swaps_pkey" PRIMARY KEY ("id");
+CREATE INDEX IF NOT EXISTS "idx_audit_logs_user_id" ON "public"."audit_logs" USING "btree" ("user_id");
 
 
 
-ALTER TABLE ONLY "public"."shifts"
-    ADD CONSTRAINT "shifts_pkey" PRIMARY KEY ("id");
+CREATE INDEX IF NOT EXISTS "idx_profiles_email" ON "public"."profiles" USING "btree" ("email");
 
 
 
-CREATE INDEX "idx_audit_logs_created_at" ON "public"."audit_logs" USING "btree" ("created_at");
+CREATE INDEX IF NOT EXISTS "idx_profiles_position" ON "public"."profiles" USING "btree" ("position");
 
 
 
-CREATE INDEX "idx_audit_logs_table_name" ON "public"."audit_logs" USING "btree" ("table_name");
+CREATE INDEX IF NOT EXISTS "idx_profiles_role" ON "public"."profiles" USING "btree" ("role");
 
 
 
-CREATE INDEX "idx_audit_logs_user_id" ON "public"."audit_logs" USING "btree" ("user_id");
+CREATE INDEX IF NOT EXISTS "idx_profiles_status" ON "public"."profiles" USING "btree" ("status");
 
 
 
-CREATE INDEX "idx_profiles_email" ON "public"."profiles" USING "btree" ("email");
+CREATE INDEX IF NOT EXISTS "idx_shift_swaps_requester_id" ON "public"."shift_swaps" USING "btree" ("requester_id");
 
 
 
-CREATE INDEX "idx_profiles_position" ON "public"."profiles" USING "btree" ("position");
+CREATE INDEX IF NOT EXISTS "idx_shift_swaps_shift_id" ON "public"."shift_swaps" USING "btree" ("shift_id");
 
 
 
-CREATE INDEX "idx_profiles_role" ON "public"."profiles" USING "btree" ("role");
+CREATE INDEX IF NOT EXISTS "idx_shift_swaps_status" ON "public"."shift_swaps" USING "btree" ("status");
 
 
 
-CREATE INDEX "idx_profiles_status" ON "public"."profiles" USING "btree" ("status");
+CREATE INDEX IF NOT EXISTS "idx_shifts_employee_id" ON "public"."shifts" USING "btree" ("employee_id");
 
 
 
-CREATE INDEX "idx_shift_swaps_requester_id" ON "public"."shift_swaps" USING "btree" ("requester_id");
+CREATE INDEX IF NOT EXISTS "idx_shifts_location" ON "public"."shifts" USING "btree" ("location");
 
 
 
-CREATE INDEX "idx_shift_swaps_shift_id" ON "public"."shift_swaps" USING "btree" ("shift_id");
+CREATE INDEX IF NOT EXISTS "idx_shifts_start_time" ON "public"."shifts" USING "btree" ("start_time");
 
 
 
-CREATE INDEX "idx_shift_swaps_status" ON "public"."shift_swaps" USING "btree" ("status");
-
-
-
-CREATE INDEX "idx_shifts_employee_id" ON "public"."shifts" USING "btree" ("employee_id");
-
-
-
-CREATE INDEX "idx_shifts_location" ON "public"."shifts" USING "btree" ("location");
-
-
-
-CREATE INDEX "idx_shifts_start_time" ON "public"."shifts" USING "btree" ("start_time");
-
-
-
-CREATE INDEX "idx_shifts_status" ON "public"."shifts" USING "btree" ("status");
+CREATE INDEX IF NOT EXISTS "idx_shifts_status" ON "public"."shifts" USING "btree" ("status");
 
 
 
@@ -522,33 +530,42 @@ CREATE OR REPLACE TRIGGER "set_updated_at_shifts" BEFORE UPDATE ON "public"."shi
 
 
 
-ALTER TABLE ONLY "public"."audit_logs"
-    ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+-- Add FOREIGN KEY constraints (skip if already exist)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'audit_logs_user_id_fkey') THEN
+    ALTER TABLE ONLY "public"."audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_id_fkey') THEN
+    ALTER TABLE ONLY "public"."profiles" ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'shift_swaps_requester_id_fkey') THEN
+    ALTER TABLE ONLY "public"."shift_swaps" ADD CONSTRAINT "shift_swaps_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE ONLY "public"."profiles"
-    ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'shift_swaps_shift_id_fkey') THEN
+    ALTER TABLE ONLY "public"."shift_swaps" ADD CONSTRAINT "shift_swaps_shift_id_fkey" FOREIGN KEY ("shift_id") REFERENCES "public"."shifts"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'shift_swaps_target_employee_id_fkey') THEN
+    ALTER TABLE ONLY "public"."shift_swaps" ADD CONSTRAINT "shift_swaps_target_employee_id_fkey" FOREIGN KEY ("target_employee_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 
-
-ALTER TABLE ONLY "public"."shift_swaps"
-    ADD CONSTRAINT "shift_swaps_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."shift_swaps"
-    ADD CONSTRAINT "shift_swaps_shift_id_fkey" FOREIGN KEY ("shift_id") REFERENCES "public"."shifts"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."shift_swaps"
-    ADD CONSTRAINT "shift_swaps_target_employee_id_fkey" FOREIGN KEY ("target_employee_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
-
-
-
-ALTER TABLE ONLY "public"."shifts"
-    ADD CONSTRAINT "shifts_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'shifts_employee_id_fkey') THEN
+    ALTER TABLE ONLY "public"."shifts" ADD CONSTRAINT "shifts_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+  END IF;
+END $$;
 
 
 

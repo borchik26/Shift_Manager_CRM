@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/auth/views/login_view.dart';
+import 'package:my_app/branches/branch_view.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/dashboard/views/dashboard_view.dart';
 import 'package:my_app/dashboard/views/home_view.dart';
@@ -67,7 +68,18 @@ final routes = [
     ),
     requiresAuth: true,
   ),
-  
+
+  // Branches - REQUIRES AUTH
+  RouteEntry(
+    path: '/dashboard/branches',
+    builder: (key, routeData) => DashboardView(
+      key: key,
+      currentPath: '/dashboard/branches',
+      child: const BranchView(),
+    ),
+    requiresAuth: true,
+  ),
+
   // 404
   RouteEntry(
     path: '/404',

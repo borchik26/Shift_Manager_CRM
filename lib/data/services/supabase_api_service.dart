@@ -1,3 +1,4 @@
+import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart' as app_user;
@@ -298,6 +299,91 @@ class SupabaseApiService implements ApiService {
       return roles;
     } catch (e) {
       throw Exception('Ошибка загрузки ролей: $e');
+    }
+  }
+
+  // =====================================================
+  // BRANCHES
+  // =====================================================
+
+  @override
+  Future<List<Branch>> getBranches() async {
+    try {
+      final response = await _client
+          .from('branches')
+          .select()
+          .order('name', ascending: true);
+
+      return (response as List).map((json) => Branch.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Ошибка загрузки филиалов: $e');
+    }
+  }
+
+  @override
+  Future<Branch?> getBranchById(String id) async {
+    try {
+      final response =
+          await _client.from('branches').select().eq('id', id).maybeSingle();
+
+      if (response == null) return null;
+
+      return Branch.fromJson(response);
+    } catch (e) {
+      throw Exception('Ошибка загрузки филиала: $e');
+    }
+  }
+
+  @override
+  Future<Branch> createBranch(Branch branch) async {
+    try {
+      final insertData = branch.toJson();
+      // Remove id for insert (Supabase generates it)
+      insertData.remove('id');
+
+      final response =
+          await _client.from('branches').insert(insertData).select().single();
+
+      return Branch.fromJson(response);
+    } on PostgrestException catch (e) {
+      // Handle unique constraint violation
+      if (e.code == '23505') {
+        throw Exception('Филиал с таким названием уже существует');
+      }
+      throw Exception('Ошибка создания филиала: ${e.message}');
+    } catch (e) {
+      throw Exception('Ошибка создания филиала: $e');
+    }
+  }
+
+  @override
+  Future<Branch> updateBranch(Branch branch) async {
+    try {
+      final response = await _client
+          .from('branches')
+          .update(branch.toJson())
+          .eq('id', branch.id)
+          .select()
+          .single();
+
+      return Branch.fromJson(response);
+    } on PostgrestException catch (e) {
+      // Handle unique constraint violation
+      if (e.code == '23505') {
+        throw Exception('Филиал с таким названием уже существует');
+      }
+      throw Exception('Ошибка обновления филиала: ${e.message}');
+    } catch (e) {
+      throw Exception('Ошибка обновления филиала: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteBranch(String id) async {
+    try {
+      await _client.from('branches').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Ошибка удаления филиала: $e');
     }
   }
 

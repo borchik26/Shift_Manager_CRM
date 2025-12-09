@@ -1,3 +1,4 @@
+import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart';
@@ -33,6 +34,7 @@ class MockApiService implements ApiService {
   // Mock data storage
   final List<Employee> _employees = [];
   final List<Shift> _shifts = [];
+  final List<Branch> _branches = [];
   User? _currentUser;
 
   MockApiService() {
@@ -414,6 +416,46 @@ class MockApiService implements ApiService {
   Future<List<String>> getAvailableRoles() async {
     await Future.delayed(_delay);
     return List.from(_availableRoles);
+  }
+
+  // Branches CRUD operations
+  @override
+  Future<List<Branch>> getBranches() async {
+    await Future.delayed(_delay);
+    return List.unmodifiable(_branches);
+  }
+
+  @override
+  Future<Branch?> getBranchById(String id) async {
+    await Future.delayed(_delay);
+    try {
+      return _branches.firstWhere((b) => b.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<Branch> createBranch(Branch branch) async {
+    await Future.delayed(_delay);
+    _branches.add(branch);
+    return branch;
+  }
+
+  @override
+  Future<Branch> updateBranch(Branch branch) async {
+    await Future.delayed(_delay);
+    final index = _branches.indexWhere((b) => b.id == branch.id);
+    if (index != -1) {
+      _branches[index] = branch;
+    }
+    return branch;
+  }
+
+  @override
+  Future<void> deleteBranch(String id) async {
+    await Future.delayed(_delay);
+    _branches.removeWhere((b) => b.id == id);
   }
 
   /// Get hourly rate for a position
