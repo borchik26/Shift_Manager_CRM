@@ -15,17 +15,33 @@ class StartupView extends StatefulWidget {
 
 class _StartupViewState extends State<StartupView> {
   late final StartupViewModel _viewModel = StartupViewModel();
-  late final BestRouterConfig _routerConfig;
+  BestRouterConfig? _routerConfig;
 
   @override
   void initState() {
     super.initState();
-    _viewModel.initializeApp();
-    _routerConfig = BestRouterConfig(routerService: locator<RouterService>());
+    _viewModel.appStateNotifier.addListener(_onStateChanged);
+    _bootstrap();
+  }
+
+  void _onStateChanged() {
+    final state = _viewModel.appStateNotifier.value;
+    if (state is AppInitialized && _routerConfig == null) {
+      setState(() {
+        _routerConfig = BestRouterConfig(
+          routerService: locator<RouterService>(),
+        );
+      });
+    }
+  }
+
+  Future<void> _bootstrap() async {
+    await _viewModel.initializeApp();
   }
 
   @override
   void dispose() {
+    _viewModel.appStateNotifier.removeListener(_onStateChanged);
     _viewModel.dispose();
     super.dispose();
   }
@@ -35,8 +51,21 @@ class _StartupViewState extends State<StartupView> {
     return ValueListenableBuilder<AppState>(
       valueListenable: _viewModel.appStateNotifier,
       builder: (context, state, _) {
+        if (_routerConfig == null) {
+          return MaterialApp(
+            home: switch (state) {
+              InitializingApp() => _SplashView(),
+              AppInitializationError() => _StartupErrorView(
+                  onRetry: () => _bootstrap(),
+                ),
+              _ => _SplashView(),
+            },
+            debugShowCheckedModeBanner: false,
+          );
+        }
+
         return MaterialApp.router(
-          routerConfig: _routerConfig,
+          routerConfig: _routerConfig!,
           title: 'Shift Manager',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.buildTheme(Brightness.light),
@@ -46,8 +75,8 @@ class _StartupViewState extends State<StartupView> {
               InitializingApp() => _SplashView(),
               AppInitialized() => InternalNotificationListener(child: child!),
               AppInitializationError() => _StartupErrorView(
-                onRetry: _viewModel.retryInitialization,
-              ),
+                  onRetry: () => _bootstrap(),
+                ),
             };
           },
         );

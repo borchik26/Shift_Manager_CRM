@@ -143,4 +143,8 @@ class RouterService with ObservableRouter {
       extra: path.extra,
     );
   }
+
+  void dispose() {
+    _navigationStack.dispose();
+  }
 }

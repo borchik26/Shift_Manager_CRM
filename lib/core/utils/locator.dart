@@ -28,7 +28,7 @@ class ModuleLocator {
     for (var module in modules) {
       final type = module.type;
       if (_modules.containsKey(type)) {
-        throw ModuleAlreadyRegisteredException(type);
+        continue; // Skip already registered modules (hot restart safe)
       }
       _modules[type] = module;
 
@@ -50,8 +50,18 @@ class ModuleLocator {
   }
 
   void reset() {
-    // Clear instances when resetting
+    // Dispose instances that have dispose method
     for (var module in _modules.values) {
+      final instance = module._instance;
+      if (instance != null) {
+        // Try to call dispose if it exists
+        try {
+          // Use dynamic dispatch to call dispose if available
+          (instance as dynamic).dispose();
+        } catch (_) {
+          // Ignore if dispose doesn't exist or fails
+        }
+      }
       module._instance = null;
     }
     _modules.clear();
