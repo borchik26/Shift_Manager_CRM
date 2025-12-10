@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/auth/views/login_view.dart';
+import 'package:my_app/auth/views/registration_view.dart';
 import 'package:my_app/branches/branch_view.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/dashboard/views/dashboard_view.dart';
@@ -17,11 +18,18 @@ final routes = [
     builder: (key, routeData) => const LoginView(),
     requiresAuth: false,
   ),
-  
-  // Auth
+
+  // Auth - Login
   RouteEntry(
     path: '/login',
     builder: (key, routeData) => const LoginView(),
+    requiresAuth: false,
+  ),
+
+  // Auth - Registration
+  RouteEntry(
+    path: '/register',
+    builder: (key, routeData) => const RegistrationView(),
     requiresAuth: false,
   ),
   

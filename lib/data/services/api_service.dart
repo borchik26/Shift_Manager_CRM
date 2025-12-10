@@ -2,6 +2,7 @@ import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart';
+import 'package:my_app/data/models/user_profile.dart';
 import 'package:my_app/data/models/position.dart';
 
 /// Abstract interface for API service
@@ -9,6 +10,7 @@ import 'package:my_app/data/models/position.dart';
 abstract class ApiService {
   // Authentication
   Future<User?> login(String username, String password);
+  Future<User?> register(String email, String password, String firstName, String lastName, String role);
   Future<void> logout();
 
   // Employees
@@ -40,7 +42,14 @@ abstract class ApiService {
   Future<Position> updatePosition(Position position);
   Future<void> deletePosition(String id);
 
+  // User Profiles (from 'profiles' table)
+  Future<List<UserProfile>> getAllProfiles();
+  Future<UserProfile?> getProfileById(String id);
+  Future<void> updateUserStatus(String userId, String newStatus);
+  Future<void> deleteUserProfile(String userId);
+
   // Filter options / Reference data
   Future<List<String>> getAvailableBranches();
   Future<List<String>> getAvailableRoles();
+  Future<List<String>> getAvailableUserRoles();
 }

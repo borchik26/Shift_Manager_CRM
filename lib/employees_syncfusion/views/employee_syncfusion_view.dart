@@ -13,6 +13,7 @@ import 'package:my_app/employees_syncfusion/viewmodels/employee_syncfusion_view_
 import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dart';
 import 'package:my_app/employees_syncfusion/widgets/create_employee_dialog.dart';
 import 'package:my_app/employees_syncfusion/widgets/employee_filters_dialog.dart';
+import 'package:my_app/employees_syncfusion/widgets/user_approval_tab.dart';
 
 class EmployeeSyncfusionView extends StatefulWidget {
   const EmployeeSyncfusionView({super.key});
@@ -21,16 +22,19 @@ class EmployeeSyncfusionView extends StatefulWidget {
   State<EmployeeSyncfusionView> createState() => _EmployeeSyncfusionViewState();
 }
 
-class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
+class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
+    with SingleTickerProviderStateMixin {
   late final EmployeeSyncfusionViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
   String? _selectedBranch;
   String? _selectedRole;
   EmployeeStatus? _selectedStatus;
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _viewModel = EmployeeSyncfusionViewModel(
       employeeRepository: locator<EmployeeRepository>(),
       shiftRepository: locator<ShiftRepository>(),
@@ -108,6 +112,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     _viewModel.dispose();
     super.dispose();
   }
@@ -119,69 +124,106 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
     return Scaffold(
       body: SafeArea(
         top: true,
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 0 : 24.0),
-          child: Padding(
-            padding: EdgeInsets.only(top: isMobile ? 4.0 : 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header - адаптивный
-                Padding(
-                  padding: EdgeInsets.only(left: isMobile ? 12.0 : 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Сотрудники',
-                        style: TextStyle(
-                          fontSize: isMobile ? 18 : 24,
-                          fontWeight: FontWeight.bold,
+        child: Column(
+          children: [
+            // Header - адаптивный
+            Padding(
+              padding: EdgeInsets.all(isMobile ? 12 : 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Управление сотрудниками',
+                    style: TextStyle(
+                      fontSize: isMobile ? 18 : 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isMobile)
+                    // Mobile: IconButton
+                    IconButton(
+                      onPressed: _showCreateEmployeeDialog,
+                      icon: const Icon(Icons.add_circle, size: 32),
+                      color: Theme.of(context).colorScheme.primary,
+                      tooltip: 'Добавить сотрудника',
+                    )
+                  else
+                    // Desktop: Full button
+                    ElevatedButton(
+                      onPressed: _showCreateEmployeeDialog,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
                         ),
                       ),
-                      if (isMobile)
-                        // Mobile: IconButton
-                        IconButton(
-                          onPressed: _showCreateEmployeeDialog,
-                          icon: const Icon(Icons.add_circle, size: 32),
-                          color: Theme.of(context).colorScheme.primary,
-                          tooltip: 'Добавить сотрудника',
-                        )
-                      else
-                        // Desktop: Full button
-                        ElevatedButton(
-                          onPressed: _showCreateEmployeeDialog,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                          ),
-                          child: const Text('Добавить сотрудника'),
-                        ),
-                    ],
+                      child: const Text('Добавить сотрудника'),
+                    ),
+                ],
+              ),
+            ),
+
+            // TabBar
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey.shade300,
+                    width: 1,
                   ),
                 ),
-                SizedBox(height: isMobile ? 0 : 24),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Сотрудники'),
+                  Tab(text: 'Подтверждение пользователей'),
+                ],
+              ),
+            ),
 
-                // Filters and Search
-                Expanded(
-                  child: Container(
-                    padding: EdgeInsets.only(
-                      left: isMobile ? 12 : 16,
-                      right: isMobile ? 12 : 16,
-                      top: isMobile ? 12 : 16,
-                      bottom: 0, // Убираем нижний padding
+            // TabBarView with employee list and user approval
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Tab 1: Employee list
+                  Padding(
+                    padding: EdgeInsets.all(isMobile ? 0 : 24.0),
+                    child: Padding(
+                      padding: EdgeInsets.only(top: isMobile ? 4.0 : 0),
+                      child: _buildEmployeeContent(isMobile),
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
+                  ),
+                  // Tab 2: User approval
+                  const UserApprovalTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build the employee list content
+  Widget _buildEmployeeContent(bool isMobile) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: isMobile ? 12 : 16,
+        right: isMobile ? 12 : 16,
+        top: isMobile ? 12 : 16,
+        bottom: 0,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
                         // Filters Row - адаптивный
                         AnimatedBuilder(
                           animation: _viewModel,
@@ -345,13 +387,6 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView> {
                         ),
                       ],
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 

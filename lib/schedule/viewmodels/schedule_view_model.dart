@@ -6,6 +6,7 @@ import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/data/repositories/branch_repository.dart';
 import 'package:my_app/data/repositories/position_repository.dart';
 import 'package:my_app/data/models/employee.dart';
+import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/schedule/models/shift_model.dart';
 import 'package:my_app/schedule/models/date_range_filter.dart';
 import 'package:my_app/schedule/models/shift_status_filter.dart';
@@ -604,13 +605,24 @@ class ScheduleViewModel extends ChangeNotifier {
         );
       }
 
-      // Call repository
-      // await _shiftRepository.updateShift(updatedShift);
+      // Convert ShiftModel to Shift and save to database
+      final shiftToSave = Shift(
+        id: updatedShift.id,
+        employeeId: updatedShift.employeeId,
+        location: updatedShift.location,
+        startTime: updatedShift.startTime,
+        endTime: updatedShift.endTime,
+        status: 'scheduled',
+        employeePreferences: updatedShift.employeePreferences,
+        roleTitle: updatedShift.roleTitle,
+        hourlyRate: updatedShift.hourlyRate,
+      );
+      await _shiftRepository.updateShift(shiftToSave);
     } catch (e) {
       // Revert on error
       await _loadData();
       locator<NotifyService>().setToastEvent(
-        ToastEventError(message: 'Failed to update shift: ${e.toString()}'),
+        ToastEventError(message: 'Ошибка при сохранении смены: ${e.toString()}'),
       );
     }
   }
@@ -625,14 +637,15 @@ class ScheduleViewModel extends ChangeNotifier {
       // Trigger UI rebuild
       notifyListeners();
 
-      // await _shiftRepository.deleteShift(shiftId);
+      // Save deletion to database
+      await _shiftRepository.deleteShift(shiftId);
 
       locator<NotifyService>().setToastEvent(
         ToastEventInfo(message: 'Смена удалена'),
       );
     } catch (e) {
       locator<NotifyService>().setToastEvent(
-        ToastEventError(message: 'Failed to delete shift: ${e.toString()}'),
+        ToastEventError(message: 'Ошибка при удалении смены: ${e.toString()}'),
       );
     }
   }
@@ -657,14 +670,26 @@ class ScheduleViewModel extends ChangeNotifier {
       // Trigger UI rebuild
       notifyListeners();
 
-      // await _shiftRepository.createShift(newShift);
+      // Save new shift to database
+      final shiftToSave = Shift(
+        id: newShift.id,
+        employeeId: newShift.employeeId,
+        location: newShift.location,
+        startTime: newShift.startTime,
+        endTime: newShift.endTime,
+        status: 'scheduled',
+        employeePreferences: newShift.employeePreferences,
+        roleTitle: newShift.roleTitle,
+        hourlyRate: newShift.hourlyRate,
+      );
+      await _shiftRepository.createShift(shiftToSave);
 
       locator<NotifyService>().setToastEvent(
         ToastEventInfo(message: 'Смена скопирована на следующий день'),
       );
     } catch (e) {
       locator<NotifyService>().setToastEvent(
-        ToastEventError(message: 'Failed to copy shift: ${e.toString()}'),
+        ToastEventError(message: 'Ошибка при копировании смены: ${e.toString()}'),
       );
     }
   }

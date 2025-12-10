@@ -2,6 +2,7 @@ import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart' as app_user;
+import 'package:my_app/data/models/user_profile.dart';
 import 'package:my_app/data/models/position.dart';
 import 'package:my_app/data/services/api_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -60,6 +61,58 @@ class SupabaseApiService implements ApiService {
       await _client.auth.signOut();
     } catch (e) {
       throw Exception('Ошибка выхода: $e');
+    }
+  }
+
+  @override
+  Future<app_user.User?> register(
+    String email,
+    String password,
+    String firstName,
+    String lastName,
+    String role,
+  ) async {
+    try {
+      // 1. Create auth user via Supabase Auth with metadata
+      final authResponse = await _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'first_name': firstName,
+          'last_name': lastName,
+          'role': role,
+        },
+      );
+
+      if (authResponse.user == null) {
+        throw Exception('Ошибка создания учётной записи');
+      }
+
+      final userId = authResponse.user!.id;
+
+      // 2. Profile is automatically created by database trigger on auth user creation
+      // The trigger creates a row in profiles table with:
+      // id, email, full_name (from first_name + last_name), role, status='pending', created_at
+      // See: supabase/migrations/20251214_create_profile_on_auth.sql
+
+      // 3. Return User object
+      return app_user.User(
+        id: userId,
+        username: email,
+        role: role,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      );
+    } on AuthException catch (e) {
+      if (e.message.contains('User already exists')) {
+        throw Exception('Пользователь с таким email уже зарегистрирован');
+      }
+      throw Exception('Ошибка регистрации: ${e.message}');
+    } catch (e) {
+      throw Exception('Ошибка регистрации: $e');
     }
   }
 
@@ -319,6 +372,12 @@ class SupabaseApiService implements ApiService {
     }
   }
 
+  @override
+  Future<List<String>> getAvailableUserRoles() async {
+    // Return available user roles for registration ('employee', 'manager')
+    return ['employee', 'manager'];
+  }
+
   // =====================================================
   // BRANCHES
   // =====================================================
@@ -517,5 +576,70 @@ class SupabaseApiService implements ApiService {
       hourlyRate: (json['hourly_rate'] as num?)?.toDouble() ?? 0.0, // ✅ ADDED: Map hourly rate field
       desiredDaysOff: [], // TODO: Implement when adding desired_days_off to DB
     );
+  }
+
+  // =====================================================
+  // USER PROFILES (from 'profiles' table)
+  // =====================================================
+
+  /// Get all user profiles from the profiles table
+  @override
+  Future<List<UserProfile>> getAllProfiles() async {
+    try {
+      final response = await _client
+          .from('profiles')
+          .select()
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => UserProfile.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw Exception('Ошибка загрузки пользователей: $e');
+    }
+  }
+
+  /// Get a specific user profile by ID
+  @override
+  Future<UserProfile?> getProfileById(String id) async {
+    try {
+      final response =
+          await _client.from('profiles').select().eq('id', id).maybeSingle();
+
+      if (response == null) return null;
+
+      return UserProfile.fromJson(response);
+    } catch (e) {
+      throw Exception('Ошибка загрузки профиля пользователя: $e');
+    }
+  }
+
+  /// Update user status (active, inactive, pending)
+  @override
+  Future<void> updateUserStatus(String userId, String newStatus) async {
+    try {
+      final validStatuses = ['active', 'inactive', 'pending'];
+      if (!validStatuses.contains(newStatus)) {
+        throw Exception('Неверный статус: $newStatus');
+      }
+
+      await _client
+          .from('profiles')
+          .update({'status': newStatus})
+          .eq('id', userId);
+    } catch (e) {
+      throw Exception('Ошибка обновления статуса пользователя: $e');
+    }
+  }
+
+  /// Delete a user profile completely
+  /// WARNING: This will also delete the auth user if cascade is configured
+  @override
+  Future<void> deleteUserProfile(String userId) async {
+    try {
+      await _client.from('profiles').delete().eq('id', userId);
+    } catch (e) {
+      throw Exception('Ошибка удаления профиля пользователя: $e');
+    }
   }
 }

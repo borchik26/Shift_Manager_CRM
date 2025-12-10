@@ -84,6 +84,27 @@ class AuthService {
     // ✅ Session is automatically managed by Supabase (tokens, refresh, etc.)
   }
 
+  /// Register new user with email, password, and role
+  /// Returns User object on success
+  Future<app_user.User?> register(
+    String email,
+    String password,
+    String firstName,
+    String lastName,
+    String role,
+  ) async {
+    final user = await _authRepository.register(
+      email,
+      password,
+      firstName,
+      lastName,
+      role,
+    );
+    // Note: Don't set as current user yet - new users are 'pending'
+    // They will auto-login once account is activated
+    return user;
+  }
+
   /// Logout current user
   Future<void> logout() async {
     await _authRepository.logout(); // ✅ FIXED: Call repository logout
@@ -113,4 +134,29 @@ class AuthService {
     _authSubscription?.cancel(); // ✅ ADDED: Cancel auth state listener
     currentUserNotifier.dispose();
   }
+
+  // =====================================================
+  // ROLE-BASED ACCESS CONTROL (RBAC)
+  // =====================================================
+
+  /// Check if current user is a manager
+  bool get isManager => currentUser?.role == 'manager';
+
+  /// Check if current user is an employee
+  bool get isEmployee => currentUser?.role == 'employee';
+
+  /// Check if user account is active
+  bool get isAccountActive => currentUser?.status == 'active';
+
+  /// Check if user can manage employees
+  bool get canManageEmployees => isManager && isAccountActive;
+
+  /// Check if user can view schedules
+  bool get canViewSchedules => currentUser != null && isAccountActive;
+
+  /// Check if user can edit shifts
+  bool get canEditShifts => isManager && isAccountActive;
+
+  /// Check if user can view own schedule only
+  bool get canViewOwnScheduleOnly => isEmployee && isAccountActive;
 }

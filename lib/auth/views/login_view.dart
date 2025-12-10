@@ -179,6 +179,23 @@ class _LoginViewState extends State<LoginView> {
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Нет аккаунта? ',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              locator<RouterService>()
+                                  .replace(Path(name: '/register'));
+                            },
+                            child: const Text('Зарегистрироваться'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
