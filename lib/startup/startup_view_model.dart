@@ -33,11 +33,12 @@ class StartupViewModel {
   final appStateNotifier = ValueNotifier<AppState>(const InitializingApp());
 
   final LoggingAbstraction _loggingAbstraction;
-  late StreamSubscription<LogRecord> loggingSubscription;
+  StreamSubscription<LogRecord>? loggingSubscription;
 
   Future<void> initializeApp() async {
     appStateNotifier.value = const InitializingApp();
     try {
+      locator.reset(); // Clear before re-registering (hot restart safe)
       locator.registerMany(modules);
       loggingSubscription = _loggingAbstraction.initializeLogging();
       appStateNotifier.value = const AppInitialized();
@@ -47,12 +48,11 @@ class StartupViewModel {
   }
 
   Future<void> retryInitialization() async {
-    locator.reset();
-    await initializeApp();
+    await initializeApp(); // reset() already called inside
   }
 
   void dispose() {
     appStateNotifier.dispose();
-    loggingSubscription.cancel();
+    loggingSubscription?.cancel();
   }
 }
