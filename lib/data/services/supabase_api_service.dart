@@ -36,8 +36,12 @@ class SupabaseApiService implements ApiService {
           .eq('id', response.user!.id)
           .single();
 
-      // Check if user is approved (status = 'active')
-      if (profileData['status'] != 'active') {
+      // Check if user is approved
+      // Managers can always login, employees need to be active
+      final userRole = profileData['role'] as String?;
+      final userStatus = profileData['status'] as String?;
+
+      if (userRole != 'manager' && userStatus != 'active') {
         await logout();
         throw Exception(
             'Ваш аккаунт ещё не активирован. Дождитесь подтверждения менеджера.');
