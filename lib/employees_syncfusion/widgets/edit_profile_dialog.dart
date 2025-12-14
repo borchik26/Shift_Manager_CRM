@@ -41,6 +41,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   final _branchRepository = locator<BranchRepository>();
   final _positionRepository = locator<PositionRepository>();
 
+  // Store all employees for validation
+  List<String> _allEmployeeEmails = [];
+
   // Form fields
   late String _firstName;
   late String _lastName;
@@ -60,6 +63,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _initializeForm();
     _loadBranches();
     _loadPositions();
+    _loadEmployees();
   }
 
   Future<void> _initializeForm() async {
@@ -122,6 +126,21 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       }
     } catch (e, s) {
       _positionsState.value = AsyncError(e.toString(), e, s);
+    }
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final employees = await _employeeRepository.getEmployees();
+      setState(() {
+        _allEmployeeEmails = employees
+            .where((e) => e.email != null && e.email!.isNotEmpty)
+            .map((e) => e.email!.toLowerCase())
+            .toList();
+      });
+    } catch (e) {
+      // Если не удалось загрузить, валидация просто не будет работать
+      debugPrint('Failed to load employees for validation: $e');
     }
   }
 
@@ -284,8 +303,23 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     valueListenable: _positionsState,
                     builder: (context, state, child) {
                       final positions = state.dataOrNull ?? [];
+                      // Remove duplicates by name, keeping the first occurrence
+                      final uniquePositions = <String, Position>{};
+                      for (var position in positions) {
+                        if (!uniquePositions.containsKey(position.name)) {
+                          uniquePositions[position.name] = position;
+                        }
+                      }
+                      final uniqueList = uniquePositions.values.toList();
+
+                      // Check if current position exists in the list
+                      final currentPositionExists = uniqueList.any((p) => p.name == _selectedPosition);
+
+                      // If current position doesn't exist, reset to first available or null
+                      final displayValue = currentPositionExists ? _selectedPosition : (uniqueList.isNotEmpty ? uniqueList.first.name : null);
+
                       return DropdownButtonFormField<String>(
-                        value: _selectedPosition,
+                        value: displayValue,
                         decoration: InputDecoration(
                           labelText: 'Должность',
                           border: OutlineInputBorder(
@@ -296,7 +330,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             vertical: 8,
                           ),
                         ),
-                        items: positions
+                        items: uniqueList
                             .map(
                               (p) => DropdownMenuItem(
                                 value: p.name,
@@ -319,8 +353,17 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     valueListenable: _branchesState,
                     builder: (context, state, child) {
                       final branches = state.dataOrNull ?? [];
+                      // Remove duplicate branch names
+                      final uniqueBranches = branches.toSet().toList();
+
+                      // Check if current branch exists in the list
+                      final currentBranchExists = uniqueBranches.contains(_selectedBranch);
+
+                      // If current branch doesn't exist, reset to first available or null
+                      final displayValue = currentBranchExists ? _selectedBranch : (uniqueBranches.isNotEmpty ? uniqueBranches.first : null);
+
                       return DropdownButtonFormField<String>(
-                        initialValue: _selectedBranch,
+                        value: displayValue,
                         decoration: InputDecoration(
                           labelText: 'Филиал',
                           border: OutlineInputBorder(
@@ -331,7 +374,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                             vertical: 8,
                           ),
                         ),
-                        items: branches
+                        items: uniqueBranches
                             .map(
                               (b) => DropdownMenuItem(
                                 value: b,
@@ -426,7 +469,24 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     onChanged: (value) => _email = value,
-                    validator: Validators.email,
+                    validator: (value) {
+                      // First, validate email format
+                      final emailError = Validators.email(value);
+                      if (emailError != null) return emailError;
+
+                      // Check for duplicate email (excluding current employee's email)
+                      if (value != null && value.trim().isNotEmpty) {
+                        final trimmedEmail = value.trim().toLowerCase();
+                        final originalEmail = widget.profile.email.toLowerCase();
+
+                        if (trimmedEmail != originalEmail &&
+                            _allEmployeeEmails.contains(trimmedEmail)) {
+                          return 'Сотрудник с таким email уже существует';
+                        }
+                      }
+
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

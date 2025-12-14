@@ -100,6 +100,17 @@ class _CreatePositionDialogState extends State<CreatePositionDialog> {
                   if (value.trim().length < 2) {
                     return 'Название должно содержать минимум 2 символа';
                   }
+
+                  // Check for duplicate position name
+                  final trimmedValue = value.trim();
+                  final isDuplicate = widget.viewModel.positions.any(
+                    (p) => p.name.toLowerCase() == trimmedValue.toLowerCase(),
+                  );
+
+                  if (isDuplicate) {
+                    return 'Должность с таким названием уже существует';
+                  }
+
                   return null;
                 },
                 onFieldSubmitted: (_) => _handleSave(),

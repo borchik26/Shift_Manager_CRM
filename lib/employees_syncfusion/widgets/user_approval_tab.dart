@@ -216,29 +216,9 @@ class _UserApprovalTabState extends State<UserApprovalTab> {
           );
         }
 
-        if (_viewModel.filteredUsers.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.people_outline,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Нет пользователей',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-          );
-        }
-
         return Column(
           children: [
-            // Фильтр по статусу
+            // Фильтр по статусу - всегда видимый
             Padding(
               padding: const EdgeInsets.all(16),
               child: Wrap(
@@ -267,84 +247,109 @@ class _UserApprovalTabState extends State<UserApprovalTab> {
                 ],
               ),
             ),
-            // Список пользователей
+            // Список пользователей или сообщение о пустом списке
             Expanded(
-              child: ListView.builder(
-                itemCount: _viewModel.filteredUsers.length,
-                itemBuilder: (context, index) {
-                  final user = _viewModel.filteredUsers[index];
-                  final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: CircleAvatar(
-                        child: Text(
-                          user.firstName?.isNotEmpty == true
-                              ? user.firstName![0].toUpperCase()
-                              : user.email[0].toUpperCase(),
-                        ),
-                      ),
-                      title: Text(user.displayName),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              child: _viewModel.filteredUsers.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 8),
-                          Text(
-                            'Email: ${user.email}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: Colors.grey[400],
                           ),
+                          const SizedBox(height: 16),
                           Text(
-                            'Роль: ${user.role == 'manager' ? 'Менеджер' : 'Сотрудник'}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          Text(
-                            'Регистрация: ${dateFormat.format(user.createdAt)}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 8),
-                          Chip(
-                            label: Text(_getStatusBadge(user.status)),
-                            backgroundColor: _getStatusColor(user.status)
-                                .withValues(alpha: 0.2),
-                            labelStyle: TextStyle(
-                              color: _getStatusColor(user.status),
-                              fontWeight: FontWeight.w500,
-                            ),
+                            'Нет пользователей',
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ],
                       ),
-                      isThreeLine: true,
-                      trailing: PopupMenuButton(
-                        itemBuilder: (context) => [
-                          if (user.isPending)
-                            PopupMenuItem(
-                              child: const Text('Активировать'),
-                              onTap: () =>
-                                  _showApproveDialog(user.id, user.displayName),
+                    )
+                  : ListView.builder(
+                      itemCount: _viewModel.filteredUsers.length,
+                      itemBuilder: (context, index) {
+                        final user = _viewModel.filteredUsers[index];
+                        final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: CircleAvatar(
+                              child: Text(
+                                user.firstName?.isNotEmpty == true
+                                    ? user.firstName![0].toUpperCase()
+                                    : user.email[0].toUpperCase(),
+                              ),
                             ),
-                          if (user.isPending)
-                            PopupMenuItem(
-                              child: const Text('Отклонить'),
-                              onTap: () =>
-                                  _showRejectDialog(user.id, user.displayName),
+                            title: Text(user.displayName),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Email: ${user.email}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Роль: ${user.role == 'manager' ? 'Менеджер' : 'Сотрудник'}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Регистрация: ${dateFormat.format(user.createdAt)}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 8),
+                                Chip(
+                                  label: Text(_getStatusBadge(user.status)),
+                                  backgroundColor: _getStatusColor(
+                                    user.status,
+                                  ).withValues(alpha: 0.2),
+                                  labelStyle: TextStyle(
+                                    color: _getStatusColor(user.status),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                          if (!user.isPending)
-                            PopupMenuItem(
-                              child: const Text('Удалить'),
-                              onTap: () =>
-                                  _showDeleteDialog(user.id, user.displayName),
+                            isThreeLine: true,
+                            trailing: PopupMenuButton(
+                              itemBuilder: (context) => [
+                                if (user.isPending)
+                                  PopupMenuItem(
+                                    child: const Text('Активировать'),
+                                    onTap: () => _showApproveDialog(
+                                      user.id,
+                                      user.displayName,
+                                    ),
+                                  ),
+                                if (user.isPending)
+                                  PopupMenuItem(
+                                    child: const Text('Отклонить'),
+                                    onTap: () => _showRejectDialog(
+                                      user.id,
+                                      user.displayName,
+                                    ),
+                                  ),
+                                if (!user.isPending)
+                                  PopupMenuItem(
+                                    child: const Text('Удалить'),
+                                    onTap: () => _showDeleteDialog(
+                                      user.id,
+                                      user.displayName,
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         );

@@ -32,6 +32,9 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
   final _branchRepository = locator<BranchRepository>();
   final _positionRepository = locator<PositionRepository>();
 
+  // Store all employees for validation
+  List<String> _allEmployeeEmails = [];
+
   // Form fields
   String _firstName = '';
   String _lastName = '';
@@ -47,6 +50,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
     super.initState();
     _loadBranches();
     _loadPositions();
+    _loadEmployees();
   }
 
   Future<void> _loadBranches() async {
@@ -71,6 +75,21 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
       }
     } catch (e, s) {
       _positionsState.value = AsyncError(e.toString(), e, s);
+    }
+  }
+
+  Future<void> _loadEmployees() async {
+    try {
+      final employees = await _employeeRepository.getEmployees();
+      setState(() {
+        _allEmployeeEmails = employees
+            .where((e) => e.email != null && e.email!.isNotEmpty)
+            .map((e) => e.email!.toLowerCase())
+            .toList();
+      });
+    } catch (e) {
+      // Если не удалось загрузить, валидация просто не будет работать
+      debugPrint('Failed to load employees for validation: $e');
     }
   }
 
@@ -245,6 +264,15 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                     valueListenable: _positionsState,
                     builder: (context, state, child) {
                       final positions = state.dataOrNull ?? [];
+                      // Remove duplicates by name, keeping the first occurrence
+                      final uniquePositions = <String, Position>{};
+                      for (var position in positions) {
+                        if (!uniquePositions.containsKey(position.name)) {
+                          uniquePositions[position.name] = position;
+                        }
+                      }
+                      final uniqueList = uniquePositions.values.toList();
+
                       return DropdownButtonFormField<String>(
                         isExpanded: true,
                         value: _selectedPosition,
@@ -258,7 +286,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                             vertical: 8,
                           ),
                         ),
-                        items: positions.map((position) {
+                        items: uniqueList.map((position) {
                           return DropdownMenuItem(
                             value: position.name,
                             child: Text(
@@ -280,6 +308,9 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                     valueListenable: _branchesState,
                     builder: (context, state, child) {
                       final branches = state.dataOrNull ?? [];
+                      // Remove duplicate branch names
+                      final uniqueBranches = branches.toSet().toList();
+
                       return DropdownButtonFormField<String>(
                         isExpanded: true,
                         initialValue: _selectedBranch,
@@ -293,7 +324,7 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                             vertical: 8,
                           ),
                         ),
-                        items: branches
+                        items: uniqueBranches
                             .map(
                               (b) => DropdownMenuItem(
                                 value: b,
@@ -355,7 +386,22 @@ class _CreateEmployeeDialogState extends State<CreateEmployeeDialog> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     onChanged: (value) => _email = value,
-                    validator: Validators.email,
+                    validator: (value) {
+                      // First, validate email format
+                      final emailError = Validators.email(value);
+                      if (emailError != null) return emailError;
+
+                      // Check for duplicate email
+                      if (value != null && value.trim().isNotEmpty) {
+                        final trimmedEmail = value.trim().toLowerCase();
+
+                        if (_allEmployeeEmails.contains(trimmedEmail)) {
+                          return 'Сотрудник с таким email уже существует';
+                        }
+                      }
+
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

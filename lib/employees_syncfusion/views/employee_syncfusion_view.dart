@@ -313,16 +313,21 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                             Icons.search,
                             size: 18,
                           ),
+                          suffixIconConstraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 3,
+                            vertical: 12,
                           ),
                           isDense: true,
                         ),
                         style: const TextStyle(fontSize: 14),
+                        textAlignVertical: TextAlignVertical.center,
                         onChanged: (value) {
                           _viewModel.searchByName(value);
                           setState(() {});

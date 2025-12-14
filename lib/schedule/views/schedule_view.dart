@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/responsive_helper.dart';
+import 'package:my_app/core/utils/color_generator.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
@@ -1056,58 +1057,69 @@ class _ScheduleViewState extends State<ScheduleView> {
   }
 
   Widget _buildRoleLegend() {
-    final roles = [
-      {'title': 'Уборщица', 'color': Colors.purple},
-      {'title': 'Кассир', 'color': Colors.green},
-      {'title': 'Повар', 'color': Colors.orange},
-      {'title': 'Менеджер', 'color': Colors.blue},
-    ];
+    return ValueListenableBuilder<AsyncValue<List<String>>>(
+      valueListenable: _viewModel.rolesState,
+      builder: (context, state, _) {
+        // Скрыть легенду при загрузке или ошибке
+        if (state.isLoading || state.hasError) {
+          return const SizedBox.shrink();
+        }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'СОТРУДНИКИ:',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
+        final roles = state.dataOrNull ?? [];
+
+        // Скрыть легенду если нет должностей
+        if (roles.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
           ),
-          const SizedBox(width: 16),
-          ...roles.map((role) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: role['color'] as Color,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    role['title'] as String,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+          child: Row(
+            children: [
+              Text(
+                'ДОЛЖНОСТИ:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
               ),
-            );
-          }),
-        ],
-      ),
+              const SizedBox(width: 16),
+              ...roles.map((role) {
+                final color = ColorGenerator.generateColor(role);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        role,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 

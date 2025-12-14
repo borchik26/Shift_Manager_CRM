@@ -120,6 +120,18 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
                   if (value.trim().length < 2) {
                     return 'Название должно содержать минимум 2 символа';
                   }
+
+                  // Check for duplicate position name (excluding current position)
+                  final trimmedValue = value.trim();
+                  final isDuplicate = widget.viewModel.positions.any(
+                    (p) => p.name.toLowerCase() == trimmedValue.toLowerCase() &&
+                           p.id != widget.position.id,
+                  );
+
+                  if (isDuplicate) {
+                    return 'Должность с таким названием уже существует';
+                  }
+
                   return null;
                 },
                 onFieldSubmitted: (_) => _handleSave(),

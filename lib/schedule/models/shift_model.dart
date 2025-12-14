@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/data/models/shift.dart';
+import 'package:my_app/core/utils/color_generator.dart';
 
 class ShiftModel {
   final String id;
@@ -37,20 +38,13 @@ class ShiftModel {
     return '$start - $end';
   }
 
-  /// Maps role title to corresponding color from legend
+  /// Maps role title to corresponding color using hash-based generation
+  /// Ensures stable colors - same role always gets same color
   static Color getColorForRole(String? roleTitle) {
-    switch (roleTitle) {
-      case 'Менеджер':
-        return Colors.blue;
-      case 'Повар':
-        return Colors.orange;
-      case 'Кассир':
-        return Colors.green;
-      case 'Уборщица':
-        return Colors.purple;
-      default:
-        return Colors.grey; // Fallback for unknown roles
+    if (roleTitle == null || roleTitle.isEmpty || roleTitle == 'Неизвестно') {
+      return Colors.grey; // Fallback for unknown roles
     }
+    return ColorGenerator.generateColor(roleTitle);
   }
 
   factory ShiftModel.fromShift(Shift shift) {

@@ -20,7 +20,8 @@ import 'package:uuid/uuid.dart';
 class CreateShiftDialog extends StatefulWidget {
   final ShiftModel? existingShift;
   final DateTime? initialDate; // Pre-fill date when creating from mobile grid
-  final String? initialProfession; // Pre-fill profession when creating from mobile grid
+  final String?
+  initialProfession; // Pre-fill profession when creating from mobile grid
 
   const CreateShiftDialog({
     super.key,
@@ -77,17 +78,21 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
   void _syncSelectionWithEmployee() {
     if (_selectedEmployeeId == null) return;
     final employees = _employeesState.value.dataOrNull ?? [];
-    Employee? employee;
-    try {
-      employee = employees.firstWhere((e) => e.id == _selectedEmployeeId);
-    } catch (_) {
-      employee = null;
+
+    // Use where().firstOrNull instead of firstWhere to avoid exception
+    final employee = employees
+        .where((e) => e.id == _selectedEmployeeId)
+        .firstOrNull;
+
+    if (employee == null) {
+      // Employee not found - clear selection
+      setState(() => _selectedEmployeeId = null);
+      return;
     }
-    if (employee == null) return;
 
     final resolvedBranch = _resolveBranch(employee.branch);
     setState(() {
-      _selectedRole = employee?.position ?? _selectedRole;
+      _selectedRole = employee.position;
       _selectedBranch = resolvedBranch;
     });
   }
@@ -117,7 +122,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
       _selectedEmployeeId = shift.employeeId != 'unassigned'
           ? shift.employeeId
           : null;
-      _selectedRole = shift.roleTitle?.isNotEmpty == true
+      _selectedRole = shift.roleTitle.isNotEmpty == true
           ? shift.roleTitle
           : null;
       _selectedBranch = shift.location;
@@ -143,8 +148,9 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
         _selectedDate = widget.initialDate!;
       }
       if (widget.initialProfession != null &&
-          _positionsState.value.dataOrNull
-                  ?.any((p) => p.name == widget.initialProfession) ==
+          _positionsState.value.dataOrNull?.any(
+                (p) => p.name == widget.initialProfession,
+              ) ==
               true) {
         _selectedRole = widget.initialProfession;
       }
@@ -176,13 +182,16 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     try {
       final branches = await _branchRepository.getBranches();
       // Sort by name
-      final sortedBranches = List<Branch>.from(branches)..sort((a, b) => a.name.compareTo(b.name));
+      final sortedBranches = List<Branch>.from(branches)
+        ..sort((a, b) => a.name.compareTo(b.name));
       _branchesState.value = AsyncData(sortedBranches);
       _syncSelectionWithEmployee();
       final names = sortedBranches.map((b) => b.name).toList();
       if (_selectedBranch == null && names.isNotEmpty) {
         setState(() => _selectedBranch = names.first);
-      } else if (_selectedBranch != null && names.isNotEmpty && !names.contains(_selectedBranch)) {
+      } else if (_selectedBranch != null &&
+          names.isNotEmpty &&
+          !names.contains(_selectedBranch)) {
         setState(() => _selectedBranch = names.first);
       } else if (names.isEmpty) {
         setState(() => _selectedBranch = null);
@@ -199,22 +208,38 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     _positionsState.value = const AsyncLoading();
     try {
       final positions = await _positionRepository.getPositions();
-      _positionRates = {for (final p in positions) p.name: p.hourlyRate};
-      _positionsState.value = AsyncData(positions);
+      // Sort by name for consistent display
+      final sortedPositions = List<Position>.from(positions)
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+      _positionRates = {for (final p in sortedPositions) p.name: p.hourlyRate};
+      _positionsState.value = AsyncData(sortedPositions);
+
+      final names = sortedPositions.map((p) => p.name).toList();
 
       // Apply initial profession if provided and not yet set
       if (_selectedRole == null &&
           widget.initialProfession != null &&
-          positions.any((p) => p.name == widget.initialProfession)) {
+          names.contains(widget.initialProfession)) {
         setState(() => _selectedRole = widget.initialProfession);
       } else if (_selectedEmployeeId == null) {
-        if (_selectedRole == null && positions.isNotEmpty) {
-          setState(() => _selectedRole = positions.first.name);
+        // When no employee selected, manage position selection
+        if (_selectedRole == null && names.isNotEmpty) {
+          setState(() => _selectedRole = names.first);
         } else if (_selectedRole != null &&
-            positions.isNotEmpty &&
-            positions.every((p) => p.name != _selectedRole)) {
-          setState(() => _selectedRole = positions.first.name);
-        } else if (positions.isEmpty) {
+            names.isNotEmpty &&
+            !names.contains(_selectedRole)) {
+          setState(() => _selectedRole = names.first);
+        } else if (names.isEmpty) {
+          setState(() => _selectedRole = null);
+        }
+      } else {
+        // When employee is selected, validate their position still exists
+        if (_selectedRole != null &&
+            names.isNotEmpty &&
+            !names.contains(_selectedRole)) {
+          setState(() => _selectedRole = names.first);
+        } else if (_selectedRole != null && names.isEmpty) {
           setState(() => _selectedRole = null);
         }
       }
@@ -296,18 +321,16 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     }
 
     final employees = _employeesState.value.dataOrNull ?? [];
-    Employee? employee;
-    try {
-      employee = employees.firstWhere((e) => e.id == employeeId);
-    } catch (_) {
-      employee = null;
-    }
+
+    // Use where().firstOrNull instead of firstWhere to avoid exception
+    final employee = employees
+        .where((e) => e.id == employeeId)
+        .firstOrNull;
 
     if (employee != null) {
-      final selectedEmployee = employee;
-      final resolvedBranch = _resolveBranch(selectedEmployee.branch);
+      final resolvedBranch = _resolveBranch(employee.branch);
       setState(() {
-        _selectedRole = selectedEmployee.position;
+        _selectedRole = employee.position;
         _selectedBranch = resolvedBranch;
       });
     }
@@ -475,7 +498,8 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
         location: _selectedBranch!,
         startTime: startDateTime,
         endTime: endDateTime,
-        status: 'pending', // will be overridden by DB default/constraint in service
+        status:
+            'pending', // will be overridden by DB default/constraint in service
         employeePreferences: _preferencesController.text.trim().isNotEmpty
             ? _preferencesController.text.trim()
             : null,
@@ -558,7 +582,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                       final employees = state.dataOrNull ?? [];
 
                       return DropdownButtonFormField<String>(
-                        value: (state.hasError || employees.isEmpty)
+                        initialValue: (state.hasError || employees.isEmpty)
                             ? null
                             : _selectedEmployeeId,
                         decoration: const InputDecoration(
@@ -595,23 +619,33 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               )
-                            : ValueListenableBuilder<AsyncValue<List<Position>>>(
+                            : ValueListenableBuilder<
+                                AsyncValue<List<Position>>
+                              >(
                                 valueListenable: _positionsState,
                                 builder: (context, state, _) {
-                                  final items = state.dataOrNull ?? const <Position>[];
-                                  final disabled = state.isLoading ||
+                                  final items =
+                                      state.dataOrNull ?? const <Position>[];
+                                  final names = items.map((p) => p.name).toList();
+                                  final disabled =
+                                      state.isLoading ||
                                       state.hasError ||
                                       items.isEmpty;
+                                  // Only use _selectedRole if it exists in current positions
+                                  final value =
+                                      (!disabled && names.contains(_selectedRole))
+                                      ? _selectedRole
+                                      : null;
                                   return DropdownButtonFormField<String>(
                                     isExpanded: true,
-                                    value: disabled ? null : _selectedRole,
+                                    initialValue: value,
                                     onTap: _loadPositions,
                                     decoration: InputDecoration(
                                       labelText: state.isLoading
                                           ? 'Загрузка...'
                                           : state.hasError
-                                              ? 'Ошибка загрузки'
-                                              : 'Должность',
+                                          ? 'Ошибка загрузки'
+                                          : 'Должность',
                                       border: const OutlineInputBorder(),
                                     ),
                                     items: items
@@ -628,11 +662,14 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                                     onChanged: disabled
                                         ? null
                                         : (value) {
-                                            setState(() => _selectedRole = value);
+                                            setState(
+                                              () => _selectedRole = value,
+                                            );
                                             _checkConflicts();
                                           },
-                                    validator: (value) =>
-                                        value == null ? 'Выберите должность' : null,
+                                    validator: (value) => value == null
+                                        ? 'Выберите должность'
+                                        : null,
                                   );
                                 },
                               ),
@@ -642,25 +679,27 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                         child: ValueListenableBuilder<AsyncValue<List<Branch>>>(
                           valueListenable: _branchesState,
                           builder: (context, state, _) {
-                            final branches = state.dataOrNull ?? const <Branch>[];
+                            final branches =
+                                state.dataOrNull ?? const <Branch>[];
                             final names = branches.map((b) => b.name).toList();
-                            final disabled = state.isLoading ||
+                            final disabled =
+                                state.isLoading ||
                                 state.hasError ||
                                 branches.isEmpty;
                             final value =
                                 (!disabled && names.contains(_selectedBranch))
-                                    ? _selectedBranch
-                                    : null;
+                                ? _selectedBranch
+                                : null;
                             return DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: value,
+                              initialValue: value,
                               onTap: _loadBranches,
                               decoration: InputDecoration(
                                 labelText: state.isLoading
                                     ? 'Загрузка...'
                                     : state.hasError
-                                        ? 'Ошибка загрузки'
-                                        : 'Филиал',
+                                    ? 'Ошибка загрузки'
+                                    : 'Филиал',
                                 border: const OutlineInputBorder(),
                               ),
                               items: names
@@ -697,7 +736,9 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                         border: OutlineInputBorder(),
                         suffixIcon: Icon(Icons.calendar_today),
                       ),
-                      child: Text(DateFormat('dd.MM.yyyy').format(_selectedDate)),
+                      child: Text(
+                        DateFormat('dd.MM.yyyy').format(_selectedDate),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

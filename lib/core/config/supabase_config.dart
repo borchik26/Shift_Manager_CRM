@@ -22,7 +22,7 @@ class SupabaseConfig {
   // === ACTIVE CONFIGURATION ===
   // Switch between local and production
   // ✅ LOCAL DEVELOPMENT MODE ENABLED
-  static const bool useLocal = true;
+  static const bool useLocal = false;
 
   static String get url => useLocal ? localUrl : productionUrl;
   static String get anonKey => useLocal ? localAnonKey : productionAnonKey;

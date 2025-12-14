@@ -92,6 +92,18 @@ class _EditBranchDialogState extends State<EditBranchDialog> {
               if (value.trim().length < 2) {
                 return 'Название должно содержать минимум 2 символа';
               }
+
+              // Check for duplicate branch name (excluding current branch)
+              final trimmedValue = value.trim();
+              final isDuplicate = widget.viewModel.branches.any(
+                (b) => b.name.toLowerCase() == trimmedValue.toLowerCase() &&
+                       b.id != widget.branch.id,
+              );
+
+              if (isDuplicate) {
+                return 'Филиал с таким названием уже существует';
+              }
+
               return null;
             },
             onFieldSubmitted: (_) => _handleSave(),

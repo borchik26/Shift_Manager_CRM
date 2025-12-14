@@ -452,23 +452,15 @@ class ScheduleViewModel extends ChangeNotifier {
   }
 
   /// Get list of unique professions from current shifts (for mobile grid view)
-  /// Returns professions sorted by predefined order: Менеджер, Повар, Кассир, Уборщица
+  /// Returns professions sorted alphabetically
   List<String> getUniqueProfessions() {
     final professions = <String>{};
     for (final shift in _getFilteredShifts()) {
       professions.add(shift.roleTitle);
     }
 
-    // Sort by predefined order
-    final order = ['Менеджер', 'Повар', 'Кассир', 'Уборщица'];
-    return professions.toList()..sort((a, b) {
-      final aIndex = order.indexOf(a);
-      final bIndex = order.indexOf(b);
-      if (aIndex == -1 && bIndex == -1) return a.compareTo(b);
-      if (aIndex == -1) return 1;
-      if (bIndex == -1) return -1;
-      return aIndex.compareTo(bIndex);
-    });
+    // Alphabetical sort
+    return professions.toList()..sort();
   }
 
   /// Get unique professions WITH "Open Shifts" row for mobile grid

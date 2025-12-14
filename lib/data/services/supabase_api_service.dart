@@ -257,7 +257,8 @@ class SupabaseApiService implements ApiService {
       // For MVP we insert directly into profiles table (no auth signUp flow)
       final insertData = {
         'id': employee.id, // UUID generated on client
-        'full_name': '${employee.firstName} ${employee.lastName}',
+        'first_name': employee.firstName,
+        'last_name': employee.lastName,
         'email': employee.email,
         'phone': employee.phone,
         'position': employee.position,
@@ -284,7 +285,8 @@ class SupabaseApiService implements ApiService {
   Future<Employee> updateEmployee(Employee employee) async {
     return _executeWithResilience(() async {
       final updateData = {
-        'full_name': employee.fullName,
+        'first_name': employee.firstName,
+        'last_name': employee.lastName,
         'email': employee.email,
         'phone': employee.phone,
         'position': employee.position,
