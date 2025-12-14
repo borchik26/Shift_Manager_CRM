@@ -159,13 +159,7 @@ class _LoginViewState extends State<LoginView> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Text(
-                                      'Войти',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                  : const Text('Войти'),
                             ),
                           );
                         },

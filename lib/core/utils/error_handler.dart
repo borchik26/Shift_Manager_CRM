@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/exceptions/app_exceptions.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 
@@ -23,34 +24,68 @@ class ErrorHandler {
   }
 
   static String _getUserFriendlyMessage(dynamic error) {
+    // Типизированные исключения — предпочтительный путь
+    if (error is NetworkException) {
+      return 'Ошибка сети. Проверьте подключение к интернету.';
+    }
+
+    if (error is TimeoutException) {
+      return 'Превышено время ожидания. Попробуйте позже.';
+    }
+
+    if (error is AuthException) {
+      return 'Ошибка авторизации. Войдите в систему снова.';
+    }
+
+    if (error is ServerException) {
+      return 'Ошибка сервера. Попробуйте позже.';
+    }
+
+    if (error is ValidationException) {
+      return error.message; // Валидация обычно имеет понятное сообщение
+    }
+
+    if (error is ConflictException) {
+      return error.message; // Конфликт обычно имеет понятное сообщение
+    }
+
+    if (error is NotFoundException) {
+      return 'Ресурс не найден.';
+    }
+
+    if (error is CircuitBreakerOpenException) {
+      return 'Сервис временно недоступен. Попробуйте через минуту.';
+    }
+
+    // Fallback для строковых ошибок (совместимость)
     final errorString = error.toString().toLowerCase();
 
     if (errorString.contains('network') || errorString.contains('socket')) {
-      return 'Network error. Please check your connection.';
+      return 'Ошибка сети. Проверьте подключение к интернету.';
     }
 
     if (errorString.contains('timeout')) {
-      return 'Request timeout. Please try again.';
+      return 'Превышено время ожидания. Попробуйте позже.';
     }
 
     if (errorString.contains('unauthorized') || errorString.contains('401')) {
-      return 'Unauthorized. Please login again.';
+      return 'Ошибка авторизации. Войдите в систему снова.';
     }
 
     if (errorString.contains('forbidden') || errorString.contains('403')) {
-      return 'Access denied.';
+      return 'Доступ запрещён.';
     }
 
     if (errorString.contains('not found') || errorString.contains('404')) {
-      return 'Resource not found.';
+      return 'Ресурс не найден.';
     }
 
     if (errorString.contains('server') || errorString.contains('500')) {
-      return 'Server error. Please try again later.';
+      return 'Ошибка сервера. Попробуйте позже.';
     }
 
     // Generic error message
-    return 'An error occurred. Please try again.';
+    return 'Произошла ошибка. Попробуйте снова.';
   }
 
   /// Handle async operations with error handling

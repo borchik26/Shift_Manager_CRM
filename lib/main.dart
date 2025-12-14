@@ -7,16 +7,22 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('🚀 APP STARTING...');
 
-  // Initialize Supabase
-  await _initializeSupabase();
+  try {
+    // Initialize Supabase
+    await _initializeSupabase();
+    debugPrint('✅ Supabase initialized');
 
-  // Initialize Russian locale for date formattingv
-  await initializeDateFormatting('ru', null);
+    // Initialize Russian locale for date formatting
+    await initializeDateFormatting('ru', null);
+    debugPrint('✅ Date formatting initialized');
 
-  configureUrlStrategy();
-
-  runApp(const StartupView());
+    configureUrlStrategy();
+    runApp(const StartupView());
+  } catch (e, stack) {
+    debugPrint('🛑 CRITICAL ERROR IN MAIN: $e\n$stack');
+  }
 }
 
 /// Initialize Supabase client

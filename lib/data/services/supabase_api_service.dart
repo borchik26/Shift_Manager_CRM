@@ -1,3 +1,9 @@
+import 'dart:async' as dart_async;
+import 'dart:io';
+
+import 'package:my_app/core/utils/exceptions/app_exceptions.dart' as app;
+import 'package:my_app/core/utils/retry/circuit_breaker.dart';
+import 'package:my_app/core/utils/retry/retry_handler.dart';
 import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
@@ -11,8 +17,96 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Connects to Supabase backend for real data persistence
 class SupabaseApiService implements ApiService {
   final SupabaseClient _client;
+  final CircuitBreaker _circuitBreaker;
 
-  SupabaseApiService() : _client = Supabase.instance.client;
+  /// Timeout для операций (30 секунд)
+  static const _defaultTimeout = Duration(seconds: 30);
+
+  SupabaseApiService()
+      : _client = Supabase.instance.client,
+        _circuitBreaker = CircuitBreaker();
+
+  // =====================================================
+  // HELPER: Выполнение с retry, circuit breaker и timeout
+  // =====================================================
+
+  /// Выполняет операцию с retry, circuit breaker и timeout
+  Future<T> _executeWithResilience<T>(
+    Future<T> Function() operation, {
+    Duration timeout = _defaultTimeout,
+  }) async {
+    return _circuitBreaker.execute(() async {
+      return RetryHandler.execute(
+        operation: () => _withTimeout(operation(), timeout: timeout),
+      );
+    });
+  }
+
+  /// Оборачивает операцию в timeout
+  Future<T> _withTimeout<T>(
+    Future<T> operation, {
+    Duration timeout = _defaultTimeout,
+  }) {
+    return operation.timeout(
+      timeout,
+      onTimeout: () => throw const app.TimeoutException(
+        'Превышено время ожидания ответа от сервера',
+      ),
+    );
+  }
+
+  /// Преобразует ошибки в типизированные исключения
+  Never _handleError(Object error, String operation) {
+    // Уже типизированные исключения
+    if (error is app.AppException) throw error;
+
+    // AuthException от Supabase
+    if (error is AuthException) {
+      throw app.AuthException('Ошибка авторизации: ${error.message}', error);
+    }
+
+    // PostgrestException от Supabase
+    if (error is PostgrestException) {
+      final code = error.code;
+      final message = error.message;
+
+      // 409 Conflict - overlap, duplicates
+      if (code == '23505' || message.contains('overlaps')) {
+        throw app.ConflictException(message, error);
+      }
+
+      // 404 Not Found
+      if (code == 'PGRST116') {
+        throw app.NotFoundException('Ресурс не найден', error);
+      }
+
+      // 401/403 Auth errors
+      if (code == '401' || code == '403') {
+        throw app.AuthException('Ошибка доступа', error, int.tryParse(code ?? ''));
+      }
+
+      // Прочие PostgrestException
+      throw app.ServerException('Ошибка базы данных: $message', error);
+    }
+
+    // SocketException - сетевые ошибки
+    if (error is SocketException) {
+      throw app.NetworkException(
+        'Ошибка сети. Проверьте подключение к интернету.',
+        error,
+      );
+    }
+
+    // dart:async TimeoutException
+    if (error is dart_async.TimeoutException) {
+      throw const app.TimeoutException(
+        'Превышено время ожидания ответа от сервера',
+      );
+    }
+
+    // Неизвестные ошибки
+    throw app.ServerException('Ошибка $operation: $error', error);
+  }
 
   // =====================================================
   // AUTHENTICATION
@@ -22,19 +116,23 @@ class SupabaseApiService implements ApiService {
   Future<app_user.User?> login(String username, String password) async {
     try {
       // In Supabase, "username" is email
-      final response = await _client.auth.signInWithPassword(
-        email: username,
-        password: password,
+      final response = await _withTimeout(
+        _client.auth.signInWithPassword(
+          email: username,
+          password: password,
+        ),
       );
 
       if (response.user == null) return null;
 
       // Fetch profile to get role and other data
-      final profileData = await _client
-          .from('profiles')
-          .select()
-          .eq('id', response.user!.id)
-          .single();
+      final profileData = await _executeWithResilience(() async {
+        return _client
+            .from('profiles')
+            .select()
+            .eq('id', response.user!.id)
+            .single();
+      });
 
       // Check if user is approved
       // Managers can always login, employees need to be active
@@ -43,7 +141,7 @@ class SupabaseApiService implements ApiService {
 
       if (userRole != 'manager' && userStatus != 'active') {
         await logout();
-        throw Exception(
+        throw app.ValidationException(
             'Ваш аккаунт ещё не активирован. Дождитесь подтверждения менеджера.');
       }
 
@@ -53,18 +151,18 @@ class SupabaseApiService implements ApiService {
         role: profileData['role'] as String,
       );
     } on AuthException catch (e) {
-      throw Exception('Ошибка авторизации: ${e.message}');
+      throw app.AuthException('Ошибка авторизации: ${e.message}', e);
     } catch (e) {
-      throw Exception('Ошибка входа: $e');
+      _handleError(e, 'входа');
     }
   }
 
   @override
   Future<void> logout() async {
     try {
-      await _client.auth.signOut();
+      await _withTimeout(_client.auth.signOut());
     } catch (e) {
-      throw Exception('Ошибка выхода: $e');
+      _handleError(e, 'выхода');
     }
   }
 
@@ -78,18 +176,20 @@ class SupabaseApiService implements ApiService {
   ) async {
     try {
       // 1. Create auth user via Supabase Auth with metadata
-      final authResponse = await _client.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'first_name': firstName,
-          'last_name': lastName,
-          'role': role,
-        },
+      final authResponse = await _withTimeout(
+        _client.auth.signUp(
+          email: email,
+          password: password,
+          data: {
+            'first_name': firstName,
+            'last_name': lastName,
+            'role': role,
+          },
+        ),
       );
 
       if (authResponse.user == null) {
-        throw Exception('Ошибка создания учётной записи');
+        throw app.ServerException('Ошибка создания учётной записи');
       }
 
       final userId = authResponse.user!.id;
@@ -112,11 +212,11 @@ class SupabaseApiService implements ApiService {
       );
     } on AuthException catch (e) {
       if (e.message.contains('User already exists')) {
-        throw Exception('Пользователь с таким email уже зарегистрирован');
+        throw app.ConflictException('Пользователь с таким email уже зарегистрирован', e);
       }
-      throw Exception('Ошибка регистрации: ${e.message}');
+      throw app.AuthException('Ошибка регистрации: ${e.message}', e);
     } catch (e) {
-      throw Exception('Ошибка регистрации: $e');
+      _handleError(e, 'регистрации');
     }
   }
 
@@ -126,7 +226,7 @@ class SupabaseApiService implements ApiService {
 
   @override
   Future<List<Employee>> getEmployees() async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('profiles')
           .select()
@@ -136,28 +236,24 @@ class SupabaseApiService implements ApiService {
       return (response as List)
           .map((json) => _profileToEmployee(json))
           .toList();
-    } catch (e) {
-      throw Exception('Ошибка загрузки сотрудников: $e');
-    }
+    });
   }
 
   @override
   Future<Employee?> getEmployeeById(String id) async {
-    try {
+    return _executeWithResilience(() async {
       final response =
           await _client.from('profiles').select().eq('id', id).maybeSingle();
 
       if (response == null) return null;
 
       return _profileToEmployee(response);
-    } catch (e) {
-      throw Exception('Ошибка загрузки сотрудника: $e');
-    }
+    });
   }
 
   @override
   Future<Employee> createEmployee(Employee employee) async {
-    try {
+    return _executeWithResilience(() async {
       // For MVP we insert directly into profiles table (no auth signUp flow)
       final insertData = {
         'id': employee.id, // UUID generated on client
@@ -181,25 +277,23 @@ class SupabaseApiService implements ApiService {
           .single();
 
       return _profileToEmployee(response);
-    } catch (e) {
-      throw Exception('Ошибка создания сотрудника: $e');
-    }
+    });
   }
 
   @override
   Future<Employee> updateEmployee(Employee employee) async {
-    try {
+    return _executeWithResilience(() async {
       final updateData = {
         'full_name': employee.fullName,
         'email': employee.email,
         'phone': employee.phone,
-        'position': employee.position, // ✅ FIXED: Add position field
+        'position': employee.position,
         'branch': employee.branch,
         'status': employee.status,
         'hire_date': employee.hireDate.toIso8601String(),
         'avatar_url': employee.avatarUrl,
-        'address': employee.address, // ✅ ADDED: Map address field
-        'hourly_rate': employee.hourlyRate, // ✅ ADDED: Map hourly rate field
+        'address': employee.address,
+        'hourly_rate': employee.hourlyRate,
       };
 
       final response = await _client
@@ -210,19 +304,14 @@ class SupabaseApiService implements ApiService {
           .single();
 
       return _profileToEmployee(response);
-    } catch (e) {
-      throw Exception('Ошибка обновления сотрудника: $e');
-    }
+    });
   }
 
   @override
   Future<void> deleteEmployee(String id) async {
-    try {
-      // Hard delete (as per plan.mdc requirements)
+    return _executeWithResilience(() async {
       await _client.from('profiles').delete().eq('id', id);
-    } catch (e) {
-      throw Exception('Ошибка удаления сотрудника: $e');
-    }
+    });
   }
 
   // =====================================================
@@ -231,8 +320,8 @@ class SupabaseApiService implements ApiService {
 
   @override
   Future<List<Shift>> getShifts({DateTime? startDate, DateTime? endDate}) async {
-    try {
-      var query = _client.from('shifts').select();
+    return _executeWithResilience(() async {
+      var query = _client.from('shifts').select('*');
 
       if (startDate != null) {
         query = query.gte('start_time', startDate.toIso8601String());
@@ -244,92 +333,81 @@ class SupabaseApiService implements ApiService {
       final response = await query.order('start_time', ascending: true);
 
       return (response as List).map((json) => Shift.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('Ошибка загрузки смен: $e');
-    }
+    });
   }
 
   @override
   Future<List<Shift>> getShiftsByEmployee(String employeeId) async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('shifts')
-          .select()
+          .select('*')
           .eq('employee_id', employeeId)
           .order('start_time', ascending: true);
 
       return (response as List).map((json) => Shift.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('Ошибка загрузки смен сотрудника: $e');
-    }
+    });
   }
 
   @override
   Future<Shift?> getShiftById(String id) async {
-    try {
+    return _executeWithResilience(() async {
       final response =
-          await _client.from('shifts').select().eq('id', id).maybeSingle();
+          await _client.from('shifts').select('*').eq('id', id).maybeSingle();
 
       if (response == null) return null;
 
       return Shift.fromJson(response);
-    } catch (e) {
-      throw Exception('Ошибка загрузки смены: $e');
-    }
+    });
   }
 
   @override
   Future<Shift> createShift(Shift shift) async {
     try {
-      final insertData = shift.toJson();
-      // Remove id for insert (Supabase generates it)
-      insertData.remove('id');
-      // Let DB apply default/valid status
-      insertData.remove('status');
+      return await _executeWithResilience(() async {
+        final insertData = shift.toJson();
+        insertData.remove('id');
+        insertData.remove('status');
 
-      final response =
-          await _client.from('shifts').insert(insertData).select().single();
+        final response =
+            await _client.from('shifts').insert(insertData).select('*').single();
 
-      return Shift.fromJson(response);
+        return Shift.fromJson(response);
+      });
     } on PostgrestException catch (e) {
-      // Handle shift overlap error from trigger
       if (e.message.contains('overlaps')) {
-        throw Exception('Смена пересекается с существующей сменой сотрудника');
+        throw app.ConflictException('Смена пересекается с существующей сменой сотрудника', e);
       }
-      throw Exception('Ошибка создания смены: ${e.message}');
-    } catch (e) {
-      throw Exception('Ошибка создания смены: $e');
+      _handleError(e, 'создания смены');
     }
   }
 
   @override
   Future<Shift> updateShift(Shift shift) async {
     try {
-      final response = await _client
-          .from('shifts')
-          .update(shift.toJson())
-          .eq('id', shift.id)
-          .select()
-          .single();
+      return await _executeWithResilience(() async {
+        final response = await _client
+            .from('shifts')
+            .update(shift.toJson())
+            .eq('id', shift.id)
+            .select('*')
+            .single();
 
-      return Shift.fromJson(response);
+        return Shift.fromJson(response);
+      });
     } on PostgrestException catch (e) {
       if (e.message.contains('overlaps')) {
-        throw Exception('Смена пересекается с существующей сменой сотрудника');
+        throw app.ConflictException('Смена пересекается с существующей сменой сотрудника', e);
       }
-      throw Exception('Ошибка обновления смены: ${e.message}');
-    } catch (e) {
-      throw Exception('Ошибка обновления смены: $e');
+      _handleError(e, 'обновления смены');
     }
   }
 
   @override
   Future<void> deleteShift(String id) async {
-    try {
+    return _executeWithResilience(() async {
       await _client.from('shifts').delete().eq('id', id);
-    } catch (e) {
-      throw Exception('Ошибка удаления смены: $e');
-    }
+    });
   }
 
   // =====================================================
@@ -338,7 +416,7 @@ class SupabaseApiService implements ApiService {
 
   @override
   Future<List<String>> getAvailableBranches() async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('branches')
           .select('name')
@@ -351,14 +429,12 @@ class SupabaseApiService implements ApiService {
 
       branches.sort();
       return branches;
-    } catch (e) {
-      throw Exception('Ошибка загрузки филиалов: $e');
-    }
+    });
   }
 
   @override
   Future<List<String>> getAvailableRoles() async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('positions')
           .select('name')
@@ -371,9 +447,7 @@ class SupabaseApiService implements ApiService {
 
       roles.sort();
       return roles;
-    } catch (e) {
-      throw Exception('Ошибка загрузки ролей: $e');
-    }
+    });
   }
 
   @override
@@ -388,83 +462,74 @@ class SupabaseApiService implements ApiService {
 
   @override
   Future<List<Branch>> getBranches() async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('branches')
           .select()
           .order('name', ascending: true);
 
       return (response as List).map((json) => Branch.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('Ошибка загрузки филиалов: $e');
-    }
+    });
   }
 
   @override
   Future<Branch?> getBranchById(String id) async {
-    try {
+    return _executeWithResilience(() async {
       final response =
           await _client.from('branches').select().eq('id', id).maybeSingle();
 
       if (response == null) return null;
 
       return Branch.fromJson(response);
-    } catch (e) {
-      throw Exception('Ошибка загрузки филиала: $e');
-    }
+    });
   }
 
   @override
   Future<Branch> createBranch(Branch branch) async {
     try {
-      final insertData = branch.toJson();
-      // Remove id for insert (Supabase generates it)
-      insertData.remove('id');
+      return await _executeWithResilience(() async {
+        final insertData = branch.toJson();
+        insertData.remove('id');
 
-      final response =
-          await _client.from('branches').insert(insertData).select().single();
+        final response =
+            await _client.from('branches').insert(insertData).select().single();
 
-      return Branch.fromJson(response);
+        return Branch.fromJson(response);
+      });
     } on PostgrestException catch (e) {
-      // Handle unique constraint violation
       if (e.code == '23505') {
-        throw Exception('Филиал с таким названием уже существует');
+        throw app.ConflictException('Филиал с таким названием уже существует', e);
       }
-      throw Exception('Ошибка создания филиала: ${e.message}');
-    } catch (e) {
-      throw Exception('Ошибка создания филиала: $e');
+      _handleError(e, 'создания филиала');
     }
   }
 
   @override
   Future<Branch> updateBranch(Branch branch) async {
     try {
-      final response = await _client
-          .from('branches')
-          .update(branch.toJson())
-          .eq('id', branch.id)
-          .select()
-          .single();
+      return await _executeWithResilience(() async {
+        final response = await _client
+            .from('branches')
+            .update(branch.toJson())
+            .eq('id', branch.id)
+            .select()
+            .single();
 
-      return Branch.fromJson(response);
+        return Branch.fromJson(response);
+      });
     } on PostgrestException catch (e) {
-      // Handle unique constraint violation
       if (e.code == '23505') {
-        throw Exception('Филиал с таким названием уже существует');
+        throw app.ConflictException('Филиал с таким названием уже существует', e);
       }
-      throw Exception('Ошибка обновления филиала: ${e.message}');
-    } catch (e) {
-      throw Exception('Ошибка обновления филиала: $e');
+      _handleError(e, 'обновления филиала');
     }
   }
 
   @override
   Future<void> deleteBranch(String id) async {
-    try {
+    return _executeWithResilience(() async {
       await _client.from('branches').delete().eq('id', id);
-    } catch (e) {
-      throw Exception('Ошибка удаления филиала: $e');
-    }
+    });
   }
 
   // =====================================================
@@ -473,7 +538,7 @@ class SupabaseApiService implements ApiService {
 
   @override
   Future<List<Position>> getPositions() async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('positions')
           .select()
@@ -482,14 +547,12 @@ class SupabaseApiService implements ApiService {
       return (response as List)
           .map((json) => Position.fromJson(json))
           .toList();
-    } catch (e) {
-      throw Exception('Ошибка загрузки должностей: $e');
-    }
+    });
   }
 
   @override
   Future<Position?> getPositionById(String id) async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('positions')
           .select()
@@ -499,61 +562,57 @@ class SupabaseApiService implements ApiService {
       if (response == null) return null;
 
       return Position.fromJson(response);
-    } catch (e) {
-      throw Exception('Ошибка загрузки должности: $e');
-    }
+    });
   }
 
   @override
   Future<Position> createPosition(Position position) async {
     try {
-      final insertData = position.toJson()..remove('id');
+      return await _executeWithResilience(() async {
+        final insertData = position.toJson()..remove('id');
 
-      final response = await _client
-          .from('positions')
-          .insert(insertData)
-          .select()
-          .single();
+        final response = await _client
+            .from('positions')
+            .insert(insertData)
+            .select()
+            .single();
 
-      return Position.fromJson(response);
+        return Position.fromJson(response);
+      });
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
-        throw Exception('Должность с таким названием уже существует');
+        throw app.ConflictException('Должность с таким названием уже существует', e);
       }
-      throw Exception('Ошибка создания должности: ${e.message}');
-    } catch (e) {
-      throw Exception('Ошибка создания должности: $e');
+      _handleError(e, 'создания должности');
     }
   }
 
   @override
   Future<Position> updatePosition(Position position) async {
     try {
-      final response = await _client
-          .from('positions')
-          .update(position.toJson())
-          .eq('id', position.id)
-          .select()
-          .single();
+      return await _executeWithResilience(() async {
+        final response = await _client
+            .from('positions')
+            .update(position.toJson())
+            .eq('id', position.id)
+            .select()
+            .single();
 
-      return Position.fromJson(response);
+        return Position.fromJson(response);
+      });
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
-        throw Exception('Должность с таким названием уже существует');
+        throw app.ConflictException('Должность с таким названием уже существует', e);
       }
-      throw Exception('Ошибка обновления должности: ${e.message}');
-    } catch (e) {
-      throw Exception('Ошибка обновления должности: $e');
+      _handleError(e, 'обновления должности');
     }
   }
 
   @override
   Future<void> deletePosition(String id) async {
-    try {
+    return _executeWithResilience(() async {
       await _client.from('positions').delete().eq('id', id);
-    } catch (e) {
-      throw Exception('Ошибка удаления должности: $e');
-    }
+    });
   }
 
   // =====================================================
@@ -589,7 +648,7 @@ class SupabaseApiService implements ApiService {
   /// Get all user profiles from the profiles table
   @override
   Future<List<UserProfile>> getAllProfiles() async {
-    try {
+    return _executeWithResilience(() async {
       final response = await _client
           .from('profiles')
           .select()
@@ -598,52 +657,61 @@ class SupabaseApiService implements ApiService {
       return (response as List)
           .map((json) => UserProfile.fromJson(json))
           .toList();
-    } catch (e) {
-      throw Exception('Ошибка загрузки пользователей: $e');
-    }
+    });
   }
 
   /// Get a specific user profile by ID
   @override
   Future<UserProfile?> getProfileById(String id) async {
-    try {
+    return _executeWithResilience(() async {
       final response =
           await _client.from('profiles').select().eq('id', id).maybeSingle();
 
       if (response == null) return null;
 
       return UserProfile.fromJson(response);
-    } catch (e) {
-      throw Exception('Ошибка загрузки профиля пользователя: $e');
-    }
+    });
   }
 
   /// Update user status (active, inactive, pending)
   @override
   Future<void> updateUserStatus(String userId, String newStatus) async {
-    try {
-      final validStatuses = ['active', 'inactive', 'pending'];
-      if (!validStatuses.contains(newStatus)) {
-        throw Exception('Неверный статус: $newStatus');
-      }
+    final validStatuses = ['active', 'inactive', 'pending'];
+    if (!validStatuses.contains(newStatus)) {
+      throw app.ValidationException('Неверный статус: $newStatus');
+    }
 
+    return _executeWithResilience(() async {
       await _client
           .from('profiles')
           .update({'status': newStatus})
           .eq('id', userId);
-    } catch (e) {
-      throw Exception('Ошибка обновления статуса пользователя: $e');
-    }
+    });
   }
 
   /// Delete a user profile completely
   /// WARNING: This will also delete the auth user if cascade is configured
   @override
   Future<void> deleteUserProfile(String userId) async {
-    try {
+    return _executeWithResilience(() async {
       await _client.from('profiles').delete().eq('id', userId);
-    } catch (e) {
-      throw Exception('Ошибка удаления профиля пользователя: $e');
+    });
+  }
+
+  // =====================================================
+  // HEALTH CHECK
+  // =====================================================
+
+  /// Проверка доступности Supabase
+  Future<bool> healthCheck() async {
+    try {
+      await _withTimeout(
+        _client.from('branches').select('id').limit(1),
+        timeout: const Duration(seconds: 5),
+      );
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

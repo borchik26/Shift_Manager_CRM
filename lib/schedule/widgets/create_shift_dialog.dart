@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
+import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/position.dart';
@@ -46,7 +47,7 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
   final _shiftsState = ValueNotifier<AsyncValue<List<Shift>>>(
     const AsyncLoading(),
   );
-  final _branchesState = ValueNotifier<AsyncValue<List<String>>>(
+  final _branchesState = ValueNotifier<AsyncValue<List<Branch>>>(
     const AsyncLoading(),
   );
   final _positionsState = ValueNotifier<AsyncValue<List<Position>>>(
@@ -66,9 +67,10 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
 
   Map<String, double> _positionRates = {};
   String? _resolveBranch(String? desired) {
-    final branches = _branchesState.value.dataOrNull ?? const <String>[];
-    if (desired != null && branches.contains(desired)) return desired;
-    if (branches.isNotEmpty) return branches.first;
+    final branches = _branchesState.value.dataOrNull ?? const <Branch>[];
+    final names = branches.map((b) => b.name).toList();
+    if (desired != null && names.contains(desired)) return desired;
+    if (names.isNotEmpty) return names.first;
     return null;
   }
 
@@ -173,9 +175,11 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
     _branchesState.value = const AsyncLoading();
     try {
       final branches = await _branchRepository.getBranches();
-      final names = branches.map((b) => b.name).toList()..sort();
-      _branchesState.value = AsyncData(names);
+      // Sort by name
+      final sortedBranches = List<Branch>.from(branches)..sort((a, b) => a.name.compareTo(b.name));
+      _branchesState.value = AsyncData(sortedBranches);
       _syncSelectionWithEmployee();
+      final names = sortedBranches.map((b) => b.name).toList();
       if (_selectedBranch == null && names.isNotEmpty) {
         setState(() => _selectedBranch = names.first);
       } else if (_selectedBranch != null && names.isNotEmpty && !names.contains(_selectedBranch)) {
@@ -635,35 +639,36 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                      child: ValueListenableBuilder<AsyncValue<List<String>>>(
-                        valueListenable: _branchesState,
-                        builder: (context, state, _) {
-                          final items = state.dataOrNull ?? const <String>[];
-                          final disabled = state.isLoading ||
-                              state.hasError ||
-                              items.isEmpty;
-                          final value =
-                              (!disabled && items.contains(_selectedBranch))
-                                  ? _selectedBranch
-                                  : null;
-                          return DropdownButtonFormField<String>(
-                            isExpanded: true,
-                            value: value,
-                            onTap: _loadBranches,
-                            decoration: InputDecoration(
-                              labelText: state.isLoading
-                                  ? 'Загрузка...'
-                                  : state.hasError
+                        child: ValueListenableBuilder<AsyncValue<List<Branch>>>(
+                          valueListenable: _branchesState,
+                          builder: (context, state, _) {
+                            final branches = state.dataOrNull ?? const <Branch>[];
+                            final names = branches.map((b) => b.name).toList();
+                            final disabled = state.isLoading ||
+                                state.hasError ||
+                                branches.isEmpty;
+                            final value =
+                                (!disabled && names.contains(_selectedBranch))
+                                    ? _selectedBranch
+                                    : null;
+                            return DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: value,
+                              onTap: _loadBranches,
+                              decoration: InputDecoration(
+                                labelText: state.isLoading
+                                    ? 'Загрузка...'
+                                    : state.hasError
                                         ? 'Ошибка загрузки'
                                         : 'Филиал',
                                 border: const OutlineInputBorder(),
                               ),
-                              items: items
+                              items: names
                                   .map(
-                                    (b) => DropdownMenuItem(
-                                      value: b,
+                                    (name) => DropdownMenuItem(
+                                      value: name,
                                       child: Text(
-                                        b,
+                                        name,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),

@@ -63,10 +63,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(24), // Rounded buttons
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
         ),
       ),
       extensions: [
@@ -84,11 +80,11 @@ class AppTheme {
 
 extension AppThemeExtension on BuildContext {
   ThemeData get theme => Theme.of(this);
-  CustomSpacing get spacing => theme.extension<CustomSpacing>()!;
-  CustomTextStyles get textStyles => theme.extension<CustomTextStyles>()!;
-  KitColorsExtension get kitColors => theme.extension<KitColorsExtension>()!;
-  CustomShadows get shadows => theme.extension<CustomShadows>()!;
-  CustomBorderRadius get borderRadius => theme.extension<CustomBorderRadius>()!;
-  CustomDurations get durations => theme.extension<CustomDurations>()!;
-  CustomBreakpoints get breakpoints => theme.extension<CustomBreakpoints>()!;
+  CustomSpacing get spacing => theme.extension<CustomSpacing>() ?? const CustomSpacing();
+  CustomTextStyles get textStyles => theme.extension<CustomTextStyles>() ?? const CustomTextStyles();
+  KitColorsExtension get kitColors => theme.extension<KitColorsExtension>() ?? const KitColorsExtension();
+  CustomShadows get shadows => theme.extension<CustomShadows>() ?? const CustomShadows();
+  CustomBorderRadius get borderRadius => theme.extension<CustomBorderRadius>() ?? const CustomBorderRadius();
+  CustomDurations get durations => theme.extension<CustomDurations>() ?? const CustomDurations();
+  CustomBreakpoints get breakpoints => theme.extension<CustomBreakpoints>() ?? const CustomBreakpoints();
 }

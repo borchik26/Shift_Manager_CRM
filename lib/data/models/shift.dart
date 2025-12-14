@@ -8,8 +8,10 @@ class Shift {
   final String status;
   final String? notes;
   final bool isNightShift;
-  final String? employeePreferences; // Employee's preferences/wishes for this shift
-  final String? roleTitle; // Role assigned to this shift (Администратор, Повар, etc.)
+  final String?
+  employeePreferences; // Employee's preferences/wishes for this shift
+  final String?
+  roleTitle; // Role assigned to this shift (Администратор, Повар, etc.)
   final double hourlyRate; // Hourly rate in rubles
 
   const Shift({

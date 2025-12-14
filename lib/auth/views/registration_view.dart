@@ -273,13 +273,7 @@ class _RegistrationViewState extends State<RegistrationView> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Text(
-                                      'Зарегистрироваться',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                  : const Text('Зарегистрироваться'),
                             ),
                           );
                         },
