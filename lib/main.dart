@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:my_app/core/config/supabase_config.dart';
 import 'package:my_app/core/utils/navigation/url_strategy/url_strategy.dart';
@@ -10,6 +11,10 @@ void main() async {
   debugPrint('🚀 APP STARTING...');
 
   try {
+    // Load environment variables from .env file
+    await dotenv.load(fileName: ".env");
+    debugPrint('✅ Environment variables loaded');
+
     // Initialize Supabase
     await _initializeSupabase();
     debugPrint('✅ Supabase initialized');

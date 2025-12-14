@@ -1,29 +1,35 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 /// Supabase configuration constants
-/// For local development, these values come from `supabase start` output
-/// For production, replace with your Supabase project credentials
+/// Credentials are loaded from .env file for security
+///
+/// Usage:
+/// 1. Create .env file in project root with your Supabase credentials
+/// 2. Make sure .env is added to .gitignore
+/// 3. Set useLocal = true for local development or false for production
 class SupabaseConfig {
   SupabaseConfig._();
 
-  // === LOCAL DEVELOPMENT ===
-  // These are default values from `supabase start`
-  // Run `supabase status` to see your local instance details
-  static const String localUrl = 'http://127.0.0.1:54321';
-  static const String localAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
-
-  // === PRODUCTION ===
-  // Project: shift_manager (vzohmhsclrmhleyndtlz)
-  // Region: West EU (Ireland)
-  static const String productionUrl =
-      'https://vzohmhsclrmhleyndtlz.supabase.co';
-  static const String productionAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6b2htaHNjbHJtaGxleW5kdGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMDUzMjcsImV4cCI6MjA4MDc4MTMyN30.sLeu7_Gp6qutxtZxnoW1ZiUXFabQn6btz13Qf4gh0sM';
-
   // === ACTIVE CONFIGURATION ===
   // Switch between local and production
-  // ✅ LOCAL DEVELOPMENT MODE ENABLED
+  // true = use LOCAL_SUPABASE_* variables from .env
+  // false = use PRODUCTION_SUPABASE_* variables from .env
   static const bool useLocal = false;
 
+  // === LOAD FROM ENV ===
+  static String get localUrl =>
+      dotenv.get('LOCAL_SUPABASE_URL', fallback: 'http://127.0.0.1:54321');
+
+  static String get localAnonKey =>
+      dotenv.get('LOCAL_SUPABASE_ANON_KEY', fallback: '');
+
+  static String get productionUrl =>
+      dotenv.get('PRODUCTION_SUPABASE_URL', fallback: '');
+
+  static String get productionAnonKey =>
+      dotenv.get('PRODUCTION_SUPABASE_ANON_KEY', fallback: '');
+
+  // === ACTIVE VALUES ===
   static String get url => useLocal ? localUrl : productionUrl;
   static String get anonKey => useLocal ? localAnonKey : productionAnonKey;
 
@@ -37,7 +43,7 @@ class SupabaseConfig {
 
   static String get statusMessage {
     if (!isConfigured) {
-      return 'Supabase не настроен. Проверьте конфигурацию в supabase_config.dart';
+      return 'Supabase не настроен. Проверьте .env файл и переменные окружения';
     }
     return useLocal
         ? 'Supabase: Локальная разработка ($localUrl)'

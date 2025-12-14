@@ -19,6 +19,13 @@ lib/.dart_tool/
 lib/.flutter-plugins
 lib/.flutter-plugins-dependencies
 
+# === БЕЗОПАСНОСТЬ: Конфиденциальные файлы ===
+# .env файлы содержат ключи и секреты - НЕ должны попадать в репозиторий!
+.env
+.env.local
+.env.production
+.env.*.local
+
 # Явно игнорировать другие папки и файлы в корне (для ясности)
 /build/
 /android/
