@@ -224,169 +224,166 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       ),
       child: Column(
         children: [
-                        // Filters Row - адаптивный
-                        AnimatedBuilder(
-                          animation: _viewModel,
-                          builder: (context, _) {
-                            final isMobile = ResponsiveHelper.isMobile(context);
+          // Filters Row - адаптивный
+          AnimatedBuilder(
+            animation: _viewModel,
+            builder: (context, _) {
+              final isMobile = ResponsiveHelper.isMobile(context);
 
-                            return Row(
-                              children: [
-                                if (isMobile)
-                                  // Mobile: кнопка фильтров
-                                  OutlinedButton.icon(
-                                    onPressed: _showFiltersDialog,
-                                    icon: const Icon(
-                                      Icons.filter_list,
-                                      size: 18,
-                                    ),
-                                    label: const Text(
-                                      'Фильтры',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                // Desktop: все фильтры
-                                ...[
-                                  _buildBranchDropdown(),
-                                  const SizedBox(width: 12),
-                                  _buildRoleDropdown(),
-                                  const SizedBox(width: 12),
-                                  _buildStatusDropdown(),
-                                  const SizedBox(width: 12),
-                                  if (_selectedBranch != null ||
-                                      _selectedRole != null ||
-                                      _selectedStatus != null ||
-                                      _searchController.text.isNotEmpty)
-                                    TextButton.icon(
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedBranch = null;
-                                          _selectedRole = null;
-                                          _selectedStatus = null;
-                                          _searchController.clear();
-                                        });
-                                        _viewModel.clearFilters();
-                                      },
-                                      icon: const Icon(Icons.clear, size: 18),
-                                      label: const Text('Сбросить'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.red.shade700,
-                                      ),
-                                    ),
-                                ],
-                                const SizedBox(width: 8),
-                                // Search - адаптивный
-                                Expanded(
-                                  child: Container(
-                                    width: isMobile ? null : 300,
-                                    height: 40,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    child: TextField(
-                                      controller: _searchController,
-                                      decoration: InputDecoration(
-                                        hintText: 'Поиск',
-                                        hintStyle: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        suffixIcon: const Icon(
-                                          Icons.search,
-                                          size: 18,
-                                        ),
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 3,
-                                            ),
-                                        isDense: true,
-                                      ),
-                                      style: const TextStyle(fontSize: 14),
-                                      onChanged: (value) {
-                                        _viewModel.searchByName(value);
-                                        setState(() {});
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+              return Row(
+                children: [
+                  if (isMobile)
+                    // Mobile: кнопка фильтров
+                    OutlinedButton.icon(
+                      onPressed: _showFiltersDialog,
+                      icon: const Icon(
+                        Icons.filter_list,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Фильтры',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        Builder(
-                          builder: (context) {
-                            final isMobile = ResponsiveHelper.isMobile(context);
-                            return SizedBox(height: isMobile ? 0 : 12);
-                          },
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-
-                        // Счетчик отфильтрованных сотрудников
-                        AnimatedBuilder(
-                          animation: _viewModel,
-                          builder: (context, _) {
-                            final isMobile = ResponsiveHelper.isMobile(context);
-
-                            return Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 0 : 12,
-                              ),
-                              child: Text(
-                                'Показано: ${_viewModel.filteredCount} из ${_viewModel.totalCount} сотрудников',
-                                style: TextStyle(
-                                  fontSize: isMobile ? 12 : 13,
-                                  color: Colors.grey.shade600,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            );
-                          },
+                      ),
+                    )
+                  else
+                  // Desktop: все фильтры
+                  ...[
+                    _buildBranchDropdown(),
+                    const SizedBox(width: 12),
+                    _buildRoleDropdown(),
+                    const SizedBox(width: 12),
+                    _buildStatusDropdown(),
+                    const SizedBox(width: 12),
+                    if (_selectedBranch != null ||
+                        _selectedRole != null ||
+                        _selectedStatus != null ||
+                        _searchController.text.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _selectedBranch = null;
+                            _selectedRole = null;
+                            _selectedStatus = null;
+                            _searchController.clear();
+                          });
+                          _viewModel.clearFilters();
+                        },
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Сбросить'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
                         ),
-                        Builder(
-                          builder: (context) {
-                            final isMobile = ResponsiveHelper.isMobile(context);
-                            return SizedBox(height: isMobile ? 0 : 12);
-                          },
+                      ),
+                  ],
+                  const SizedBox(width: 8),
+                  // Search - адаптивный
+                  Expanded(
+                    child: Container(
+                      width: isMobile ? null : 300,
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
                         ),
-
-                        // Table or Mobile List - ADAPTIVE
-                        Expanded(
-                          child: AnimatedBuilder(
-                            animation: _viewModel,
-                            builder: (context, _) {
-                              final isMobile = ResponsiveHelper.isMobile(
-                                context,
-                              );
-
-                              return isMobile
-                                  ? _buildMobileList()
-                                  : _buildDataGrid();
-                            },
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Поиск',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
                           ),
+                          suffixIcon: const Icon(
+                            Icons.search,
+                            size: 18,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          isDense: true,
                         ),
-                      ],
+                        style: const TextStyle(fontSize: 14),
+                        onChanged: (value) {
+                          _viewModel.searchByName(value);
+                          setState(() {});
+                        },
+                      ),
                     ),
+                  ),
+                ],
+              );
+            },
+          ),
+          Builder(
+            builder: (context) {
+              final isMobile = ResponsiveHelper.isMobile(context);
+              return SizedBox(height: isMobile ? 0 : 12);
+            },
+          ),
+
+          // Счетчик отфильтрованных сотрудников
+          AnimatedBuilder(
+            animation: _viewModel,
+            builder: (context, _) {
+              final isMobile = ResponsiveHelper.isMobile(context);
+
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 0 : 12,
+                ),
+                child: Text(
+                  'Показано: ${_viewModel.filteredCount} из ${_viewModel.totalCount} сотрудников',
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 13,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            },
+          ),
+          Builder(
+            builder: (context) {
+              final isMobile = ResponsiveHelper.isMobile(context);
+              return SizedBox(height: isMobile ? 0 : 12);
+            },
+          ),
+
+          // Table or Mobile List - ADAPTIVE
+          Expanded(
+            child: AnimatedBuilder(
+              animation: _viewModel,
+              builder: (context, _) {
+                final isMobile = ResponsiveHelper.isMobile(
+                  context,
+                );
+
+                return isMobile ? _buildMobileList() : _buildDataGrid();
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
