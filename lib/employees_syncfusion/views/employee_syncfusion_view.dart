@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_datagrid/datagrid.dart';
-import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:my_app/core/services/auth_service.dart';
+import 'package:my_app/core/ui/widgets/confirmation_dialog.dart';
+import 'package:my_app/core/ui/widgets/filter_dropdown.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/responsive_helper.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
@@ -15,6 +15,8 @@ import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dar
 import 'package:my_app/employees_syncfusion/widgets/create_employee_dialog.dart';
 import 'package:my_app/employees_syncfusion/widgets/employee_filters_dialog.dart';
 import 'package:my_app/employees_syncfusion/widgets/user_approval_tab.dart';
+import 'package:my_app/employees_syncfusion/widgets/employee_desktop_grid.dart';
+import 'package:my_app/employees_syncfusion/widgets/employee_card.dart';
 
 class EmployeeSyncfusionView extends StatefulWidget {
   const EmployeeSyncfusionView({super.key});
@@ -68,29 +70,13 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
   }
 
   Future<void> _onDeleteEmployee(String employeeId) async {
-    // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Подтверждение удаления'),
-        content: const Text(
-          'Вы уверены, что хотите удалить этого сотрудника? '
-          'Это действие нельзя отменить.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Удалить'),
-          ),
-        ],
+      builder: (context) => const ConfirmationDialog(
+        title: 'Подтверждение удаления',
+        message: 'Вы уверены, что хотите удалить этого сотрудника? '
+            'Это действие нельзя отменить.',
+        confirmText: 'Удалить',
       ),
     );
 
@@ -293,11 +279,55 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                   else
                   // Desktop: все фильтры
                   ...[
-                    _buildBranchDropdown(),
+                    FilterDropdown<String>(
+                      value: _selectedBranch,
+                      emoji: '🏢',
+                      label: 'Филиал',
+                      items: _viewModel!.availableBranches,
+                      itemLabel: (branch) => branch,
+                      onChanged: (value) {
+                        setState(() => _selectedBranch = value);
+                        _viewModel!.filterByBranch(value);
+                      },
+                    ),
                     const SizedBox(width: 12),
-                    _buildRoleDropdown(),
+                    FilterDropdown<String>(
+                      value: _selectedRole,
+                      emoji: '👔',
+                      label: 'Должность',
+                      items: _viewModel!.availableRoles,
+                      itemLabel: (role) => role,
+                      onChanged: (value) {
+                        setState(() => _selectedRole = value);
+                        _viewModel!.filterByRole(value);
+                      },
+                    ),
                     const SizedBox(width: 12),
-                    _buildStatusDropdown(),
+                    FilterDropdown<EmployeeStatus>(
+                      value: _selectedStatus,
+                      emoji: '📊',
+                      label: 'Статус',
+                      items: EmployeeStatus.values,
+                      itemLabel: (status) => status.displayName,
+                      itemBuilder: (status) => Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: status.color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(status.displayName),
+                        ],
+                      ),
+                      onChanged: (value) {
+                        setState(() => _selectedStatus = value);
+                        _viewModel!.filterByStatus(value);
+                      },
+                    ),
                     const SizedBox(width: 12),
                     if (_selectedBranch != null ||
                         _selectedRole != null ||
@@ -462,274 +492,9 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     }
   }
 
-  Widget _buildBranchDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: DropdownButton<String>(
-        value: _selectedBranch,
-        isDense: true,
-        hint: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🏢', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
-            Text(
-              'Филиал',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blue.shade700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        underline: const SizedBox(),
-        icon: const SizedBox(),
-        items: _viewModel!.availableBranches.map((branch) {
-          return DropdownMenuItem(value: branch, child: Text(branch));
-        }).toList(),
-        onChanged: (value) {
-          setState(() => _selectedBranch = value);
-          _viewModel!.filterByBranch(value);
-        },
-      ),
-    );
-  }
-
-  Widget _buildRoleDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: DropdownButton<String>(
-        value: _selectedRole,
-        isDense: true,
-        hint: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('👔', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
-            Text(
-              'Должность',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blue.shade700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        underline: const SizedBox(),
-        icon: const SizedBox(),
-        items: _viewModel!.availableRoles.map((role) {
-          return DropdownMenuItem(value: role, child: Text(role));
-        }).toList(),
-        onChanged: (value) {
-          setState(() => _selectedRole = value);
-          _viewModel!.filterByRole(value);
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatusDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: DropdownButton<EmployeeStatus>(
-        value: _selectedStatus,
-        isDense: true,
-        hint: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('📊', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
-            Text(
-              'Статус',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blue.shade700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        underline: const SizedBox(),
-        icon: const SizedBox(),
-        items: EmployeeStatus.values.map((status) {
-          return DropdownMenuItem(
-            value: status,
-            child: Row(
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: status.color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(status.displayName),
-              ],
-            ),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() => _selectedStatus = value);
-          _viewModel!.filterByStatus(value);
-        },
-      ),
-    );
-  }
-
   // Desktop DataGrid
   Widget _buildDataGrid() {
-    return SfDataGridTheme(
-      data: SfDataGridThemeData(
-        headerColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        gridLineColor: Colors.transparent,
-        rowHoverColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        selectionColor: Colors.transparent,
-      ),
-      child: SfDataGrid(
-        source: _viewModel!.dataSource,
-        columns: _buildColumns(),
-        columnWidthMode: ColumnWidthMode.fill,
-        rowHeight: 72,
-        headerRowHeight: 56,
-        allowSorting: true,
-        gridLinesVisibility: GridLinesVisibility.none,
-        headerGridLinesVisibility: GridLinesVisibility.none,
-        horizontalScrollPhysics: const AlwaysScrollableScrollPhysics(),
-      ),
-    );
-  }
-
-  List<GridColumn> _buildColumns() {
-    return [
-      // ID (скрытая колонка)
-      GridColumn(columnName: 'id', label: Container(), visible: false),
-
-      // Name
-      GridColumn(
-        columnName: 'name',
-        label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Сотрудник',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-      ),
-
-      // Role
-      GridColumn(
-        columnName: 'role',
-        label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Должность',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-      ),
-
-      // Branch
-      GridColumn(
-        columnName: 'branch',
-        label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Филиал',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-      ),
-
-      // Status
-      GridColumn(
-        columnName: 'status',
-        label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Статус смены',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-        allowSorting: false,
-      ),
-
-      // Hours
-      GridColumn(
-        columnName: 'hours',
-        label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Отработано часов',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-      ),
-
-      // Actions
-      GridColumn(
-        columnName: 'actions',
-        label: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.center,
-          child: Text(
-            '',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-        allowSorting: false,
-      ),
-
-      // Avatar URL (скрытая колонка)
-      GridColumn(columnName: 'avatarUrl', label: Container(), visible: false),
-    ];
+    return EmployeeDesktopGrid(viewModel: _viewModel!);
   }
 
   // Mobile List View with Cards
@@ -764,195 +529,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       itemCount: employees.length,
       itemBuilder: (context, index) {
         final employee = employees[index];
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: InkWell(
-            onTap: () => _onEmployeeTap(employee.id),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header: Avatar + Name + Actions
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        foregroundImage: NetworkImage(employee.avatarUrl),
-                        onForegroundImageError: (_, __) {},
-                        child: Text(
-                          employee.name.isNotEmpty ? employee.name[0] : '?',
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              employee.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              employee.role,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Action Menu
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'history',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.history,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 12),
-                                const Text('История'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                  color: Colors.red.shade700,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Удалить',
-                                  style: TextStyle(color: Colors.red.shade700),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value == 'history') {
-                            _onEmployeeTap(employee.id);
-                          } else if (value == 'delete') {
-                            _onDeleteEmployee(employee.id);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-                  Divider(height: 1, color: Theme.of(context).dividerColor),
-                  const SizedBox(height: 8),
-
-                  // Details Grid
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInfoChip(
-                          icon: Icons.business,
-                          label: employee.branch,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildInfoChip(
-                          icon: Icons.access_time,
-                          label: '${employee.workedHours} ч',
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Status Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: employee.status.color,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.circle,
-                          size: 8,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          employee.status.displayName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return EmployeeCard(
+          employee: employee,
+          onTap: () => _onEmployeeTap(employee.id),
+          onDelete: () => _onDeleteEmployee(employee.id),
         );
       },
-    );
-  }
-
-  // Helper widget for info chips
-  Widget _buildInfoChip({required IconData icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

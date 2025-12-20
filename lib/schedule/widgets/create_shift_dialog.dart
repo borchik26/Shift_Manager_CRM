@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/data/models/branch.dart';
@@ -15,6 +14,9 @@ import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 import 'package:my_app/schedule/models/shift_model.dart';
 import 'package:my_app/schedule/utils/shift_conflict_checker.dart';
 import 'package:my_app/schedule/widgets/conflict_warning_box.dart';
+import 'package:my_app/schedule/widgets/shift_form_employee_section.dart';
+import 'package:my_app/schedule/widgets/shift_form_datetime_section.dart';
+import 'package:my_app/schedule/widgets/shift_form_location_section.dart';
 import 'package:uuid/uuid.dart';
 
 class CreateShiftDialog extends StatefulWidget {
@@ -569,214 +571,37 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  ValueListenableBuilder<AsyncValue<List<Employee>>>(
-                    valueListenable: _employeesState,
-                    builder: (context, state, child) {
-                      if (state.isLoading) {
-                        return const LinearProgressIndicator();
-                      }
-
-                      final employees = state.dataOrNull ?? [];
-
-                      return DropdownButtonFormField<String>(
-                        initialValue: (state.hasError || employees.isEmpty)
-                            ? null
-                            : _selectedEmployeeId,
-                        decoration: const InputDecoration(
-                          labelText: 'Сотрудник',
-                          hintText: 'Выберите сотрудника',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: employees.map((e) {
-                          return DropdownMenuItem(
-                            value: e.id,
-                            child: Text('${e.firstName} ${e.lastName}'),
-                          );
-                        }).toList(),
-                        onChanged: (state.hasError || employees.isEmpty)
-                            ? null
-                            : _onEmployeeSelected,
-                        // Employee is optional - can be null for unassigned shifts
-                        validator: null,
-                      );
+                  ShiftFormEmployeeSection(
+                    employeesState: _employeesState,
+                    selectedEmployeeId: _selectedEmployeeId,
+                    onEmployeeSelected: _onEmployeeSelected,
+                  ),
+                  const SizedBox(height: 16),
+                  ShiftFormLocationSection(
+                    positionsState: _positionsState,
+                    branchesState: _branchesState,
+                    selectedRole: _selectedRole,
+                    selectedBranch: _selectedBranch,
+                    selectedEmployeeId: _selectedEmployeeId,
+                    onRoleChanged: (value) {
+                      setState(() => _selectedRole = value);
+                      _checkConflicts();
                     },
+                    onBranchChanged: (value) {
+                      setState(() => _selectedBranch = value);
+                      _checkConflicts();
+                    },
+                    onLoadPositions: _loadPositions,
+                    onLoadBranches: _loadBranches,
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _selectedEmployeeId != null
-                            ? InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'Должность',
-                                  border: OutlineInputBorder(),
-                                ),
-                                child: Text(
-                                  _selectedRole ?? '—',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              )
-                            : ValueListenableBuilder<
-                                AsyncValue<List<Position>>
-                              >(
-                                valueListenable: _positionsState,
-                                builder: (context, state, _) {
-                                  final items =
-                                      state.dataOrNull ?? const <Position>[];
-                                  final names = items.map((p) => p.name).toList();
-                                  final disabled =
-                                      state.isLoading ||
-                                      state.hasError ||
-                                      items.isEmpty;
-                                  // Only use _selectedRole if it exists in current positions
-                                  final value =
-                                      (!disabled && names.contains(_selectedRole))
-                                      ? _selectedRole
-                                      : null;
-                                  return DropdownButtonFormField<String>(
-                                    isExpanded: true,
-                                    initialValue: value,
-                                    onTap: _loadPositions,
-                                    decoration: InputDecoration(
-                                      labelText: state.isLoading
-                                          ? 'Загрузка...'
-                                          : state.hasError
-                                          ? 'Ошибка загрузки'
-                                          : 'Должность',
-                                      border: const OutlineInputBorder(),
-                                    ),
-                                    items: items
-                                        .map(
-                                          (p) => DropdownMenuItem(
-                                            value: p.name,
-                                            child: Text(
-                                              '${p.name} (${p.hourlyRate.toStringAsFixed(0)} ₽/ч)',
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: disabled
-                                        ? null
-                                        : (value) {
-                                            setState(
-                                              () => _selectedRole = value,
-                                            );
-                                            _checkConflicts();
-                                          },
-                                    validator: (value) => value == null
-                                        ? 'Выберите должность'
-                                        : null,
-                                  );
-                                },
-                              ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ValueListenableBuilder<AsyncValue<List<Branch>>>(
-                          valueListenable: _branchesState,
-                          builder: (context, state, _) {
-                            final branches =
-                                state.dataOrNull ?? const <Branch>[];
-                            final names = branches.map((b) => b.name).toList();
-                            final disabled =
-                                state.isLoading ||
-                                state.hasError ||
-                                branches.isEmpty;
-                            final value =
-                                (!disabled && names.contains(_selectedBranch))
-                                ? _selectedBranch
-                                : null;
-                            return DropdownButtonFormField<String>(
-                              isExpanded: true,
-                              initialValue: value,
-                              onTap: _loadBranches,
-                              decoration: InputDecoration(
-                                labelText: state.isLoading
-                                    ? 'Загрузка...'
-                                    : state.hasError
-                                    ? 'Ошибка загрузки'
-                                    : 'Филиал',
-                                border: const OutlineInputBorder(),
-                              ),
-                              items: names
-                                  .map(
-                                    (name) => DropdownMenuItem(
-                                      value: name,
-                                      child: Text(
-                                        name,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: disabled
-                                  ? null
-                                  : (value) {
-                                      setState(() => _selectedBranch = value);
-                                      _checkConflicts();
-                                    },
-                              validator: (value) =>
-                                  value == null ? 'Выберите филиал' : null,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: _selectDate,
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Дата',
-                        border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      child: Text(
-                        DateFormat('dd.MM.yyyy').format(_selectedDate),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectTime(true),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Начало',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.access_time),
-                            ),
-                            child: Text(_startTime.format(context)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectTime(false),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Конец',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.access_time),
-                            ),
-                            child: Text(_endTime.format(context)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Длительность: ${_duration.toStringAsFixed(1)} ч',
-                    style: TextStyle(
-                      color: _duration < 2 ? Colors.red : Colors.grey,
-                      fontSize: 12,
-                    ),
+                  ShiftFormDateTimeSection(
+                    selectedDate: _selectedDate,
+                    startTime: _startTime,
+                    endTime: _endTime,
+                    duration: _duration,
+                    onSelectDate: _selectDate,
+                    onSelectTime: _selectTime,
                   ),
                   const SizedBox(height: 16),
                   TextField(

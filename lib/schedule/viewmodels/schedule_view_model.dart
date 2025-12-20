@@ -19,6 +19,8 @@ import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 import 'package:my_app/core/utils/debouncer.dart';
+import 'package:my_app/schedule/utils/shift_filter.dart';
+import 'package:my_app/schedule/utils/employee_sorter.dart';
 
 class ScheduleViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -233,108 +235,20 @@ class ScheduleViewModel extends ChangeNotifier {
     _updateDataSource();
   }
 
-  // Helper method to get filtered shifts based on current filters
   List<ShiftModel> _getFilteredShifts() {
-    var filteredShifts = _shifts;
-
-    // FIRST: Apply role-based filtering for employees
-    if (_authService.isEmployee) {
-      final currentUserId = _authService.currentUser?.id;
-      if (currentUserId != null) {
-        filteredShifts = filteredShifts
-            .where((s) => s.employeeId == currentUserId)
-            .toList();
-      }
-    }
-
-    // Filter by search query
-    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
-      final query = _searchQuery!.toLowerCase();
-      final filteredEmployees = _getFilteredEmployees();
-
-      // Filter shifts by role/location OR if they belong to filtered employees
-      filteredShifts = filteredShifts.where((s) {
-        final matchesShift =
-            s.roleTitle.toLowerCase().contains(query) ||
-            s.location.toLowerCase().contains(query);
-        final matchesEmployee = filteredEmployees.any(
-          (e) => e.id == s.employeeId,
-        );
-        return matchesShift || matchesEmployee;
-      }).toList();
-    }
-
-    if (_employeeFilter != null) {
-      filteredShifts = filteredShifts
-          .where((s) => s.employeeId == _employeeFilter)
-          .toList();
-    }
-
-    if (_locationFilter != null) {
-      filteredShifts = filteredShifts
-          .where((s) => s.location == _locationFilter)
-          .toList();
-    }
-
-    if (_roleFilter != null) {
-      filteredShifts = filteredShifts
-          .where((s) => s.roleTitle == _roleFilter)
-          .toList();
-    }
-
-    if (_dateFilter != null) {
-      filteredShifts = filteredShifts.where((s) {
-        final shiftDate = DateTime(
-          s.startTime.year,
-          s.startTime.month,
-          s.startTime.day,
-        );
-        final filterDate = DateTime(
-          _dateFilter!.year,
-          _dateFilter!.month,
-          _dateFilter!.day,
-        );
-        return shiftDate.isAtSameMomentAs(filterDate);
-      }).toList();
-    }
-
-    // Filter by date range (Сегодня/Неделя/Месяц)
-    if (_dateRangeFilter != DateRangeFilter.all) {
-      final startDate = _dateRangeFilter.getStartDate();
-      final endDate = _dateRangeFilter.getEndDate();
-
-      if (startDate != null && endDate != null) {
-        filteredShifts = filteredShifts.where((s) {
-          return s.startTime.isAfter(startDate) &&
-              s.startTime.isBefore(endDate);
-        }).toList();
-      }
-    }
-
-    // Filter by status (С конфликтами/Предупреждениями)
-    if (_statusFilter != ShiftStatusFilter.all) {
-      filteredShifts = filteredShifts.where((s) {
-        final conflicts = ShiftConflictChecker.checkConflicts(
-          newShift: s,
-          existingShifts: _shifts,
-          excludeShiftId: s.id,
-        );
-
-        switch (_statusFilter) {
-          case ShiftStatusFilter.withConflicts:
-            return ShiftConflictChecker.hasHardErrors(conflicts);
-          case ShiftStatusFilter.withWarnings:
-            return ShiftConflictChecker.hasWarnings(conflicts);
-          case ShiftStatusFilter.normal:
-            return !ShiftConflictChecker.hasHardErrors(conflicts) &&
-                !ShiftConflictChecker.hasWarnings(conflicts);
-          case ShiftStatusFilter.all:
-            return true;
-        }
-      }).toList();
-    }
-
-    return filteredShifts;
+    return ShiftFilter.apply(
+      shifts: _shifts,
+      employees: _employees,
+      searchQuery: _searchQuery,
+      employeeFilter: _employeeFilter,
+      locationFilter: _locationFilter,
+      roleFilter: _roleFilter,
+      dateFilter: _dateFilter,
+      dateRangeFilter: _dateRangeFilter,
+      statusFilter: _statusFilter,
+      isEmployee: _authService.isEmployee,
+      currentUserId: _authService.currentUser?.id,
+    );
   }
 
   // Helper method to get filtered employees based on current filters
@@ -447,28 +361,7 @@ class ScheduleViewModel extends ChangeNotifier {
   }
 
   void sortEmployees(String sortBy) {
-    // Create a mutable copy of the list before sorting
-    _employees = List<Employee>.from(_employees);
-
-    switch (sortBy) {
-      case 'name_asc':
-        _employees.sort((a, b) => a.fullName.compareTo(b.fullName));
-        break;
-      case 'name_desc':
-        _employees.sort((a, b) => b.fullName.compareTo(a.fullName));
-        break;
-      case 'role':
-        _employees.sort(
-          (a, b) => a.position.compareTo(b.position),
-        );
-        break;
-      case 'branch':
-        _employees.sort(
-          (a, b) => a.branch.compareTo(b.branch),
-        );
-        break;
-    }
-    // _updateFilteredList() already calls notifyListeners() via _updateDataSource()
+    _employees = EmployeeSorter.sort(_employees, sortBy);
     _updateFilteredList();
   }
 
