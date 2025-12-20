@@ -144,7 +144,7 @@ class _EmployeeFiltersDialogState extends State<EmployeeFiltersDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: DropdownButton<T>(
         value: value,
@@ -168,7 +168,7 @@ class _EmployeeFiltersDialogState extends State<EmployeeFiltersDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: DropdownButton<EmployeeStatus>(
         value: _selectedStatus,

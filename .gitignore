@@ -1,0 +1,43 @@
+# Игнорировать все в корне
+/*
+
+# Разрешить .gitignore сам по себе
+!/.gitignore
+
+# Разрешить нужные файлы
+!/README.md
+!/pubspec.yaml
+
+# Разрешить папку lib/ и всё её содержимое
+!/lib/
+
+# Явно разрешить рекурсивно всё внутри lib/ (на случай если /* заблокировал)
+!/lib/**
+
+# Но игнорировать служебные Flutter файлы внутри lib/ (если они появятся)
+lib/.dart_tool/
+lib/.flutter-plugins
+lib/.flutter-plugins-dependencies
+
+# === БЕЗОПАСНОСТЬ: Конфиденциальные файлы ===
+# .env файлы содержат ключи и секреты - НЕ должны попадать в репозиторий!
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Явно игнорировать другие папки и файлы в корне (для ясности)
+/build/
+/android/
+/ios/
+/web/
+/macos/
+/supabase/
+/docs/
+/test/
+/pubspec.lock
+/analysis_options.yaml
+.DS_Store
+.idea/
+.vscode/
+.cursor/

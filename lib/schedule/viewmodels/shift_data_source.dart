@@ -35,7 +35,9 @@ class ShiftDataSource extends CalendarDataSource {
 
   @override
   List<Object> getResourceIds(int index) {
-    return [_getShiftData(index).employeeId];
+    final employeeId = _getShiftData(index).employeeId;
+    // Return 'unassigned' if employeeId is null (shouldn't happen with our logic)
+    return [employeeId ?? 'unassigned'];
   }
 
   @override

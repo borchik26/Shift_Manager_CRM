@@ -4,6 +4,8 @@ import 'package:my_app/data/models/shift.dart';
 import 'package:my_app/data/models/user.dart';
 import 'package:my_app/data/models/user_profile.dart';
 import 'package:my_app/data/models/position.dart';
+import 'package:my_app/data/models/audit_log.dart';
+import 'package:my_app/audit_logs/models/audit_log_filter.dart';
 
 /// Abstract interface for API service
 /// All data access should go through this interface
@@ -52,4 +54,12 @@ abstract class ApiService {
   Future<List<String>> getAvailableBranches();
   Future<List<String>> getAvailableRoles();
   Future<List<String>> getAvailableUserRoles();
+
+  // Audit Logs
+  Future<List<AuditLog>> getAuditLogs({
+    int limit = 500,
+    int offset = 0,
+    AuditLogFilter? filter,
+  });
+  Future<void> deleteAllAuditLogs();
 }

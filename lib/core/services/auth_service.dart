@@ -159,4 +159,24 @@ class AuthService {
 
   /// Check if user can view own schedule only
   bool get canViewOwnScheduleOnly => isEmployee && isAccountActive;
+
+  /// Check if user can create shifts
+  bool get canCreateShifts => currentUser != null && isAccountActive;
+
+  /// Check if user can edit their own shifts
+  bool canEditOwnShift(String? shiftEmployeeId) {
+    if (!isAccountActive) return false;
+    return shiftEmployeeId == currentUser?.id;
+  }
+
+  /// Check if user can delete their own shifts
+  bool canDeleteOwnShift(String? shiftEmployeeId) {
+    return canEditOwnShift(shiftEmployeeId);
+  }
+
+  /// Check if user can view all employees
+  bool get canViewAllEmployees => isManager && isAccountActive;
+
+  /// Check if user should see only own data
+  bool get shouldShowOnlyOwnData => isEmployee && isAccountActive;
 }

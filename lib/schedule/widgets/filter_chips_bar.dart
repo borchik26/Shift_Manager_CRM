@@ -18,9 +18,9 @@ class FilterChipsBar extends StatelessWidget {
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
+          bottom: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
       child: ListView(
@@ -52,9 +52,9 @@ class FilterChipsBar extends StatelessWidget {
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 fontSize: 13,
               ),
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               side: BorderSide(
-                color: isActive ? Colors.blue.shade700 : Colors.grey.shade300,
+                color: isActive ? Colors.blue.shade700 : Theme.of(context).dividerColor,
                 width: isActive ? 2 : 1,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

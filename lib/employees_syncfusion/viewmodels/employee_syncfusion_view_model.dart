@@ -21,6 +21,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   String? _selectedRole;
   EmployeeStatus? _selectedStatus;
   Function(String)? _onDeleteEmployee;
+  bool _disposed = false; // Track disposed state
 
   // Filter options loaded from repository
   List<String> _availableBranches = [];
@@ -184,7 +185,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
           workedHours: workedHours.toInt(),
           avatarUrl:
               employee.avatarUrl ??
-              'https://i.pravatar.cc/150?u=${employee.id}',
+              _generateAvatarUrl(employee.firstName, employee.lastName),
         );
       }).toList();
 
@@ -211,13 +212,13 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
       _positionRates = {
         for (final p in positions) p.name: p.hourlyRate,
       };
-      notifyListeners();
+      _safeNotifyListeners();
     } catch (e) {
       // В случае ошибки используем пустые списки
       _availableBranches = [];
       _availableRoles = [];
       _positionRates = {};
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -276,7 +277,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
     // Update the existing data source instead of creating a new one
     // This ensures the Grid updates correctly and maintains state
     _dataSource.updateDataSource(filtered);
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   // Сброс всех фильтров
@@ -286,5 +287,25 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
     _selectedRole = null;
     _selectedStatus = null;
     _applyFilters();
+  }
+
+  /// Generate avatar URL using ui-avatars.com (more stable than pravatar.cc)
+  /// Creates initials-based avatars with consistent colors
+  String _generateAvatarUrl(String firstName, String lastName) {
+    final initials = '${firstName[0]}${lastName[0]}'.toUpperCase();
+    return 'https://ui-avatars.com/api/?name=$initials&background=random&size=150&bold=true';
+  }
+
+  /// Safe notifyListeners that checks if ViewModel is still alive
+  void _safeNotifyListeners() {
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

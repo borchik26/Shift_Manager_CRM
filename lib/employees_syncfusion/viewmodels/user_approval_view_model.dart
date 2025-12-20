@@ -11,6 +11,7 @@ class UserApprovalViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String _statusFilter = ''; // '' = all, 'pending', 'active', 'inactive'
+  bool _disposed = false; // Track disposed state
 
   UserApprovalViewModel({required AuthRepository authRepository})
       : _authRepository = authRepository;
@@ -38,11 +39,11 @@ class UserApprovalViewModel extends ChangeNotifier {
     try {
       _users = await _authRepository.getAllProfiles();
       _applyFilters();
-      notifyListeners();
+      _safeNotifyListeners();
     } catch (e) {
       _error = e.toString();
       debugPrint('Error loading users: $e');
-      notifyListeners();
+      _safeNotifyListeners();
     } finally {
       _setLoading(false);
     }
@@ -52,7 +53,7 @@ class UserApprovalViewModel extends ChangeNotifier {
   void setStatusFilter(String status) {
     _statusFilter = status;
     _applyFilters();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   /// Approve a user (pending -> active)
@@ -63,7 +64,7 @@ class UserApprovalViewModel extends ChangeNotifier {
     } catch (e) {
       _error = 'Ошибка активации пользователя: $e';
       debugPrint('Error approving user: $e');
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -75,7 +76,7 @@ class UserApprovalViewModel extends ChangeNotifier {
     } catch (e) {
       _error = 'Ошибка отклонения пользователя: $e';
       debugPrint('Error rejecting user: $e');
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -87,14 +88,14 @@ class UserApprovalViewModel extends ChangeNotifier {
     } catch (e) {
       _error = 'Ошибка удаления пользователя: $e';
       debugPrint('Error deleting user: $e');
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   /// Clear error message
   void clearError() {
     _error = null;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   // =====================================================
@@ -111,5 +112,18 @@ class UserApprovalViewModel extends ChangeNotifier {
     } else {
       _filteredUsers = _users.where((u) => u.status == _statusFilter).toList();
     }
+  }
+
+  /// Safe notifyListeners that checks if ViewModel is still alive
+  void _safeNotifyListeners() {
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

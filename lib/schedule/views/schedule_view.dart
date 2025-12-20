@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/responsive_helper.dart';
@@ -36,6 +37,7 @@ class _ScheduleViewState extends State<ScheduleView> {
   void initState() {
     super.initState();
     _viewModel = ScheduleViewModel(
+      authService: locator<AuthService>(),
       shiftRepository: locator<ShiftRepository>(),
       employeeRepository: locator<EmployeeRepository>(),
       branchRepository: locator<BranchRepository>(),
@@ -102,9 +104,9 @@ class _ScheduleViewState extends State<ScheduleView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             border: Border(
-              bottom: BorderSide(color: Colors.grey.shade200),
+              bottom: BorderSide(color: Theme.of(context).dividerColor),
             ),
           ),
           child: Row(
@@ -169,11 +171,11 @@ class _ScheduleViewState extends State<ScheduleView> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                     ),
                     style: const TextStyle(fontSize: 13),
@@ -211,9 +213,9 @@ class _ScheduleViewState extends State<ScheduleView> {
             vertical: 8,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             border: Border(
-              bottom: BorderSide(color: Colors.grey.shade200),
+              bottom: BorderSide(color: Theme.of(context).dividerColor),
             ),
           ),
           child: Row(
@@ -230,14 +232,16 @@ class _ScheduleViewState extends State<ScheduleView> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade50,
+                    fillColor: Theme.of(context).brightness == Brightness.light
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   style: const TextStyle(fontSize: 13),
                   onChanged: (value) {
@@ -269,10 +273,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                             height: 36,
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: Colors.grey.shade300,
+                                color: Theme.of(context).dividerColor,
                               ),
                               borderRadius: BorderRadius.circular(8),
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.surface,
                             ),
                             child: const Icon(
                               Icons.filter_alt_outlined,
@@ -358,22 +362,24 @@ class _ScheduleViewState extends State<ScheduleView> {
               // Фильтр по должности
               _buildRoleDropdown(),
               const SizedBox(width: 12),
-              // Фильтр по сотруднику
-              ValueListenableBuilder<AsyncValue<List<Employee>>>(
-                valueListenable: _viewModel.employeesState,
-                builder: (context, employeesState, _) {
-                  if (employeesState.isLoading) return const SizedBox();
-                  if (employeesState is! AsyncData<List<Employee>>)
-                    return const SizedBox();
+              // Фильтр по сотруднику (только для менеджера)
+              if (locator<AuthService>().isManager)
+                ValueListenableBuilder<AsyncValue<List<Employee>>>(
+                  valueListenable: _viewModel.employeesState,
+                  builder: (context, employeesState, _) {
+                    if (employeesState.isLoading) return const SizedBox();
+                    if (employeesState is! AsyncData<List<Employee>>) {
+                      return const SizedBox();
+                    }
 
-                  return EmployeeFilterDropdown(
-                    employees: employeesState.data,
-                    selectedEmployeeId: _viewModel.employeeFilter,
-                    onEmployeeSelected: _viewModel.setEmployeeFilter,
-                  );
-                },
-              ),
-              const SizedBox(width: 12),
+                    return EmployeeFilterDropdown(
+                      employees: employeesState.data,
+                      selectedEmployeeId: _viewModel.employeeFilter,
+                      onEmployeeSelected: _viewModel.setEmployeeFilter,
+                    );
+                  },
+                ),
+              if (locator<AuthService>().isManager) const SizedBox(width: 12),
               // Фильтр по периоду
               ListenableBuilder(
                 listenable: _viewModel,
@@ -674,10 +680,10 @@ class _ScheduleViewState extends State<ScheduleView> {
           child: Container(
             height: 40, // Explicitly match timelineAppointmentHeight
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               border: Border(
-                right: BorderSide(color: Colors.grey.shade300, width: 1),
-                bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+                right: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+                bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
               ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -712,10 +718,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                 Expanded(
                   child: Text(
                     resource.displayName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -806,8 +812,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                         Flexible(
                           child: Text(
                             shift.timeRange,
-                            style: const TextStyle(
-                              color: Colors.black87,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black87,
                               fontWeight: FontWeight.w700,
                               fontSize: 9,
                               height: 1.2,
@@ -853,17 +861,21 @@ class _ScheduleViewState extends State<ScheduleView> {
                             ),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(
+                          Icon(
                             Icons.place,
                             size: 8,
-                            color: Colors.black54,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black54,
                           ),
                           const SizedBox(width: 1),
                           Flexible(
                             child: Text(
                               shift.location,
-                              style: const TextStyle(
-                                color: Colors.black54,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black54,
                                 fontSize: 8,
                                 fontWeight: FontWeight.w500,
                                 height: 1.2,
@@ -1075,8 +1087,10 @@ class _ScheduleViewState extends State<ScheduleView> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            color: Theme.of(context).brightness == Brightness.light
+                ? Colors.white
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
           ),
           child: Row(
             children: [
@@ -1085,7 +1099,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(width: 16),
@@ -1133,9 +1147,9 @@ class _ScheduleViewState extends State<ScheduleView> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: Theme.of(context).dividerColor),
           ),
           child: DropdownButton<String>(
             value: isDisabled ? null : _selectedBranch,
@@ -1189,9 +1203,11 @@ class _ScheduleViewState extends State<ScheduleView> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).brightness == Brightness.light
+                ? Colors.white
+                : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: Theme.of(context).dividerColor),
           ),
           child: DropdownButton<String>(
             value: isDisabled ? null : _selectedRole,

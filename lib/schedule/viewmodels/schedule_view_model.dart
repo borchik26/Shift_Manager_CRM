@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
@@ -20,6 +21,7 @@ import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
 import 'package:my_app/core/utils/debouncer.dart';
 
 class ScheduleViewModel extends ChangeNotifier {
+  final AuthService _authService;
   final EmployeeRepository _employeeRepository;
   final ShiftRepository _shiftRepository;
   final BranchRepository _branchRepository;
@@ -30,6 +32,9 @@ class ScheduleViewModel extends ChangeNotifier {
 
   // Cache for CalendarResource objects to avoid recreating them
   final Map<String, CalendarResource> _resourceCache = {};
+
+  // Track if disposed
+  bool _disposed = false;
 
   List<ShiftModel> _shifts = [];
   List<Employee> _employees = [];
@@ -71,11 +76,13 @@ class ScheduleViewModel extends ChangeNotifier {
   }
 
   ScheduleViewModel({
+    required AuthService authService,
     required EmployeeRepository employeeRepository,
     required ShiftRepository shiftRepository,
     required BranchRepository branchRepository,
     required PositionRepository positionRepository,
-  }) : _employeeRepository = employeeRepository,
+  }) : _authService = authService,
+       _employeeRepository = employeeRepository,
        _shiftRepository = shiftRepository,
        _branchRepository = branchRepository,
        _positionRepository = positionRepository {
@@ -103,7 +110,6 @@ class ScheduleViewModel extends ChangeNotifier {
   /// Helper method to update DataSource without recreating it
   /// This preserves the calendar's internal state and prevents appointments from disappearing
   void _updateDataSource() {
-    final filteredShifts = _getFilteredShifts();
     final filteredEmployees = _getFilteredEmployees();
 
     // Prepare resources list - create FRESH resources every time
@@ -132,14 +138,28 @@ class ScheduleViewModel extends ChangeNotifier {
       );
     }
 
+    // Create a Set of valid resource IDs for fast lookup
+    final validResourceIds = resources.map((r) => r.id).toSet();
+
+    // Get filtered shifts
+    final filteredShifts = _getFilteredShifts();
+
+    // IMPORTANT: Filter shifts to only show those with valid resource IDs
+    // This prevents IndexOutOfRange errors in Syncfusion Calendar
+    final shiftsWithValidResources = filteredShifts.where((shift) {
+      final employeeId = shift.employeeId ?? 'unassigned';
+      return validResourceIds.contains(employeeId);
+    }).toList();
+
     // COMPLETELY RECREATE DataSource - this is the safest approach
-    dataSource = ShiftDataSource(filteredShifts, resources: resources);
+    dataSource = ShiftDataSource(shiftsWithValidResources, resources: resources);
 
-    // Update state for other listeners
-    state.value = AsyncData(filteredShifts);
-
-    // Notify listeners to trigger UI rebuild with new dataSource
-    notifyListeners();
+    // Update state for other listeners (only if not disposed)
+    if (!_disposed) {
+      state.value = AsyncData(shiftsWithValidResources);
+      // Notify listeners to trigger UI rebuild with new dataSource
+      notifyListeners();
+    }
   }
 
   // Get or create cached resource for an employee
@@ -188,10 +208,14 @@ class ScheduleViewModel extends ChangeNotifier {
       resources.insert(0, _resourceCache['unassigned']!);
 
       dataSource = ShiftDataSource(_shifts, resources: resources);
-      employeesState.value = AsyncData(_employees);
+      if (!_disposed) {
+        employeesState.value = AsyncData(_employees);
+      }
     } catch (e, s) {
-      state.value = AsyncError(e.toString(), e, s);
-      employeesState.value = AsyncError(e.toString(), e, s);
+      if (!_disposed) {
+        state.value = AsyncError(e.toString(), e, s);
+        employeesState.value = AsyncError(e.toString(), e, s);
+      }
       // Notify user about error
       locator<NotifyService>().setToastEvent(
         ToastEventError(
@@ -209,6 +233,16 @@ class ScheduleViewModel extends ChangeNotifier {
   // Helper method to get filtered shifts based on current filters
   List<ShiftModel> _getFilteredShifts() {
     var filteredShifts = _shifts;
+
+    // FIRST: Apply role-based filtering for employees
+    if (_authService.isEmployee) {
+      final currentUserId = _authService.currentUser?.id;
+      if (currentUserId != null) {
+        filteredShifts = filteredShifts
+            .where((s) => s.employeeId == currentUserId)
+            .toList();
+      }
+    }
 
     // Filter by search query
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
@@ -526,6 +560,18 @@ class ScheduleViewModel extends ChangeNotifier {
     });
   }
 
+  /// Check if current user can edit the shift
+  bool _canEditShift(ShiftModel shift) {
+    if (_authService.isManager) return true;
+
+    if (_authService.isEmployee) {
+      final currentUserId = _authService.currentUser?.id;
+      return shift.employeeId == currentUserId;
+    }
+
+    return false;
+  }
+
   Future<void> refreshShifts() async {
     await _loadData();
   }
@@ -541,10 +587,24 @@ class ScheduleViewModel extends ChangeNotifier {
       if (shiftIndex == -1) return;
 
       final oldShift = _shifts[shiftIndex];
+
+      // Check permissions
+      if (!_canEditShift(oldShift)) {
+        locator<NotifyService>().setToastEvent(
+          ToastEventError(message: 'У вас нет прав на редактирование этой смены'),
+        );
+        return;
+      }
+
+      // Handle 'unassigned' resource: convert to null for database
+      final String? finalEmployeeId = newResourceId == 'unassigned'
+          ? null
+          : (newResourceId ?? oldShift.employeeId);
+
       final updatedShift = oldShift.copyWith(
         startTime: newStartTime,
         endTime: newEndTime,
-        employeeId: newResourceId ?? oldShift.employeeId,
+        employeeId: finalEmployeeId,
       );
 
       // Check for conflicts before updating
@@ -621,6 +681,20 @@ class ScheduleViewModel extends ChangeNotifier {
 
   Future<void> deleteShift(String shiftId) async {
     try {
+      // Find the shift to check permissions
+      final shiftToDelete = _shifts.firstWhere(
+        (s) => s.id == shiftId,
+        orElse: () => throw Exception('Смена не найдена'),
+      );
+
+      // Check permissions
+      if (!_canEditShift(shiftToDelete)) {
+        locator<NotifyService>().setToastEvent(
+          ToastEventError(message: 'У вас нет прав на удаление этой смены'),
+        );
+        return;
+      }
+
       _shifts.removeWhere((s) => s.id == shiftId);
 
       // Update DataSource correctly without recreating it
@@ -696,6 +770,7 @@ class ScheduleViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _searchDebouncer.dispose();
     state.dispose();
     employeesState.dispose();

@@ -253,9 +253,12 @@ class DashboardViewModel {
     int conflicts = 0;
     final employeeShifts = <String, List<Shift>>{};
 
-    // Group shifts by employee
+    // Group shifts by employee (skip unassigned shifts)
     for (final shift in shifts) {
-      employeeShifts.putIfAbsent(shift.employeeId, () => []).add(shift);
+      final empId = shift.employeeId;
+      if (empId != null) {
+        employeeShifts.putIfAbsent(empId, () => []).add(shift);
+      }
     }
 
     // Check for overlaps for each employee

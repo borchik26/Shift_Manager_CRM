@@ -40,10 +40,10 @@ class ProfessionRow extends StatelessWidget {
             width: 48,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200),
-                right: BorderSide(color: Colors.grey.shade300),
+                bottom: BorderSide(color: Theme.of(context).dividerColor),
+                right: BorderSide(color: Theme.of(context).dividerColor),
               ),
             ),
             child: Column(

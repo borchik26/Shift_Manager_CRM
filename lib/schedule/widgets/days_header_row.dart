@@ -22,8 +22,8 @@ class DaysHeaderRow extends StatelessWidget {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       child: Row(
         children: [
@@ -32,7 +32,7 @@ class DaysHeaderRow extends StatelessWidget {
             width: 48,
             decoration: BoxDecoration(
               border: Border(
-                right: BorderSide(color: Colors.grey.shade300),
+                right: BorderSide(color: Theme.of(context).dividerColor),
               ),
             ),
           ),
@@ -49,7 +49,7 @@ class DaysHeaderRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isToday ? Colors.blue.shade50 : null,
                 border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
+                  left: BorderSide(color: Theme.of(context).dividerColor),
                 ),
               ),
               child: Column(
@@ -60,7 +60,7 @@ class DaysHeaderRow extends StatelessWidget {
                     _getDayName(date.weekday),
                     style: TextStyle(
                       fontSize: 12,
-                      color: isToday ? Colors.blue : Colors.grey.shade600,
+                      color: isToday ? Colors.blue : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
@@ -70,7 +70,7 @@ class DaysHeaderRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isToday ? Colors.blue : Colors.black87,
+                      color: isToday ? Colors.blue : Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                 ],

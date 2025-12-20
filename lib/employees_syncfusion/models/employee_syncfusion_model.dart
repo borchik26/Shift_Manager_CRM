@@ -87,15 +87,20 @@ class EmployeeSyncfusionModel {
     // Используем такой же формат ID, как и в MockApiService, чтобы профиль
     // можно было загрузить по маршруту `/dashboard/employees/:id`.
     final id = 'emp_${index + 1}';
+    final name = names[index % names.length];
+    final nameParts = name.split(' ');
+    final initials = nameParts.length >= 2
+        ? '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase()
+        : name.substring(0, 1).toUpperCase();
 
     return EmployeeSyncfusionModel(
       id: id,
-      name: names[index % names.length],
+      name: name,
       role: roles[index % roles.length],
       branch: branches[index % branches.length],
       status: statuses[index % statuses.length],
       workedHours: 120 + (index * 7) % 80,
-      avatarUrl: 'https://i.pravatar.cc/150?u=$id',
+      avatarUrl: 'https://ui-avatars.com/api/?name=$initials&background=random&size=150&bold=true',
     );
   }
 

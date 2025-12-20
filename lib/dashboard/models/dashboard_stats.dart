@@ -4,12 +4,14 @@ class DashboardStats {
   final int todayShifts;
   final double weeklyHours;
   final int conflicts;
+  final double? monthlySalary;
 
   const DashboardStats({
     required this.totalEmployees,
     required this.todayShifts,
     required this.weeklyHours,
     required this.conflicts,
+    this.monthlySalary,
   });
 }
 

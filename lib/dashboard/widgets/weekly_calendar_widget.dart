@@ -53,15 +53,17 @@ class WeeklyCalendarWidget extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: isToday
-                            ? Theme.of(context).primaryColor.withOpacity(0.1)
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[800]
+                                : Theme.of(context).primaryColor.withValues(alpha: 0.15))
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
-                        border: isToday
-                            ? Border.all(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              )
-                            : null,
+                        border: Border.all(
+                          color: isToday
+                              ? Theme.of(context).primaryColor
+                              : Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                          width: isToday ? 2 : 1,
+                        ),
                       ),
                       child: Column(
                         children: [
@@ -71,7 +73,7 @@ class WeeklyCalendarWidget extends StatelessWidget {
                                   fontWeight: FontWeight.w500,
                                   color: isToday
                                       ? Theme.of(context).primaryColor
-                                      : Colors.grey[600],
+                                      : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                 ),
                           ),
                           const SizedBox(height: 4),
@@ -81,21 +83,22 @@ class WeeklyCalendarWidget extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                   color: isToday
                                       ? Theme.of(context).primaryColor
-                                      : Colors.black87,
+                                      : Theme.of(context).textTheme.titleMedium?.color,
                                 ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '$count',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
                                 ),
                           ),
                           Text(
                             'смен',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 10,
-                                  color: Colors.grey[500],
+                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                                 ),
                           ),
                         ],

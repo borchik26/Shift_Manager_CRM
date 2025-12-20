@@ -1,7 +1,7 @@
 /// Shift model for schedule management
 class Shift {
   final String id;
-  final String employeeId;
+  final String? employeeId; // Nullable to support unassigned/free shifts
   final String location;
   final DateTime startTime;
   final DateTime endTime;
@@ -16,7 +16,7 @@ class Shift {
 
   const Shift({
     required this.id,
-    required this.employeeId,
+    this.employeeId, // Now optional
     required this.location,
     required this.startTime,
     required this.endTime,
@@ -33,7 +33,7 @@ class Shift {
   factory Shift.fromJson(Map<String, dynamic> json) {
     return Shift(
       id: json['id'] as String,
-      employeeId: json['employee_id'] as String,
+      employeeId: json['employee_id'] as String?, // Nullable
       location: json['location'] as String,
       startTime: DateTime.parse(json['start_time'] as String),
       endTime: DateTime.parse(json['end_time'] as String),

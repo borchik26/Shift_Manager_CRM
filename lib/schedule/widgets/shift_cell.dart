@@ -32,32 +32,32 @@ class ShiftCell extends StatelessWidget {
       width: 100,
       constraints: const BoxConstraints(minHeight: 60),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
-          left: BorderSide(color: Colors.grey.shade300),
-          bottom: BorderSide(color: Colors.grey.shade200),
+          left: BorderSide(color: Theme.of(context).dividerColor),
+          bottom: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
-      child: shifts.isEmpty ? _buildEmptyCell() : _buildShiftsList(),
+      child: shifts.isEmpty ? _buildEmptyCell(context) : _buildShiftsList(context),
     );
   }
 
   /// Empty cell with "+" icon for adding new shift
-  Widget _buildEmptyCell() {
+  Widget _buildEmptyCell(BuildContext context) {
     return InkWell(
       onTap: onTap,
       child: Center(
         child: Icon(
           Icons.add_circle_outline,
           size: 16, // Changed from 24 to match filled cells
-          color: Colors.grey.shade400,
+          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
         ),
       ),
     );
   }
 
   /// List of shift cards stacked vertically with add button at bottom
-  Widget _buildShiftsList() {
+  Widget _buildShiftsList(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.max, // Changed from min to max
       children: [
@@ -85,14 +85,14 @@ class ShiftCell extends StatelessWidget {
             height: 24, // Very compact height
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
               ),
             ),
             child: Center(
               child: Icon(
                 Icons.add_circle_outline,
                 size: 16,
-                color: Colors.grey.shade500,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
               ),
             ),
           ),

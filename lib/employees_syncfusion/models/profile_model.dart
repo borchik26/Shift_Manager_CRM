@@ -238,12 +238,16 @@ class EmployeeProfile {
       ),
     ];
 
+    // Generate avatar URL with initials
+    final initials = '${employee.firstName[0]}${employee.lastName[0]}'.toUpperCase();
+    final avatarUrl = employee.avatarUrl ??
+        'https://ui-avatars.com/api/?name=$initials&background=random&size=150&bold=true';
+
     return EmployeeProfile(
       id: employee.id,
       name: '${employee.firstName} ${employee.lastName}',
       role: employee.position,
-      avatarUrl:
-          employee.avatarUrl ?? 'https://i.pravatar.cc/150?u=${employee.id}',
+      avatarUrl: avatarUrl,
       email: employee.email ?? 'employee@example.com',
       phone: employee.phone ?? '+7 (999) 000-00-00',
       address: 'г. Москва, ул. Ленина, д. 1', // Mock address

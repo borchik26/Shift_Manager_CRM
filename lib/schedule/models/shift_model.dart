@@ -5,7 +5,7 @@ import 'package:my_app/core/utils/color_generator.dart';
 
 class ShiftModel {
   final String id;
-  final String employeeId;
+  final String? employeeId; // Nullable to support unassigned/free shifts
   final DateTime startTime;
   final DateTime endTime;
   final String roleTitle;
@@ -16,7 +16,7 @@ class ShiftModel {
 
   const ShiftModel({
     required this.id,
-    required this.employeeId,
+    this.employeeId, // Now optional
     required this.startTime,
     required this.endTime,
     required this.roleTitle,
@@ -52,9 +52,12 @@ class ShiftModel {
     final roleTitle = shift.roleTitle ?? 'Неизвестно';
     final color = getColorForRole(roleTitle);
 
+    // Convert null employeeId to 'unassigned' for UI
+    final employeeId = shift.employeeId ?? 'unassigned';
+
     return ShiftModel(
       id: shift.id,
-      employeeId: shift.employeeId,
+      employeeId: employeeId,
       startTime: shift.startTime,
       endTime: shift.endTime,
       roleTitle: roleTitle,
@@ -78,7 +81,7 @@ class ShiftModel {
   }) {
     return ShiftModel(
       id: id ?? this.id,
-      employeeId: employeeId ?? this.employeeId,
+      employeeId: employeeId, // Don't use ?? to allow setting to null
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       roleTitle: roleTitle ?? this.roleTitle,

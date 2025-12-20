@@ -18,7 +18,8 @@ class ShiftCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final employeeName = viewModel.getEmployeeNameById(shift.employeeId) ??
+    final employeeId = shift.employeeId ?? 'unassigned';
+    final employeeName = viewModel.getEmployeeNameById(employeeId) ??
         'Свободная смена';
 
     return GestureDetector(
@@ -27,7 +28,7 @@ class ShiftCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: shift.color.withOpacity(0.1),
+          color: shift.color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: shift.color,
@@ -40,10 +41,10 @@ class ShiftCard extends StatelessWidget {
             // Employee name - with text wrapping
             Text(
               employeeName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
                 height: 1.1,
               ),
               maxLines: 2,
@@ -55,14 +56,14 @@ class ShiftCard extends StatelessWidget {
             // Time range - with Expanded to prevent overflow
             Row(
               children: [
-                Icon(Icons.access_time, size: 9, color: Colors.grey.shade600),
+                Icon(Icons.access_time, size: 9, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     shift.timeRange,
                     style: TextStyle(
                       fontSize: 8,
-                      color: Colors.grey.shade800,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
@@ -77,14 +78,14 @@ class ShiftCard extends StatelessWidget {
             // Location - already has Expanded
             Row(
               children: [
-                Icon(Icons.place, size: 9, color: Colors.grey.shade600),
+                Icon(Icons.place, size: 9, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     shift.location,
                     style: TextStyle(
                       fontSize: 8,
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

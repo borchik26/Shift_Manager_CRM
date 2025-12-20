@@ -13,6 +13,7 @@ class LoadingHoursChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chartData = _buildChartData();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       elevation: 2,
@@ -34,15 +35,37 @@ class LoadingHoursChart extends StatelessWidget {
             SizedBox(
               height: 200,
               child: SfCartesianChart(
+                plotAreaBackgroundColor: Colors.transparent,
                 primaryXAxis: CategoryAxis(
-                  labelStyle: const TextStyle(fontSize: 12),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  majorGridLines: const MajorGridLines(width: 0),
+                  axisLine: AxisLine(
+                    color: Theme.of(context).dividerColor,
+                  ),
                 ),
                 primaryYAxis: NumericAxis(
                   title: AxisTitle(
                     text: 'Часы',
-                    textStyle: const TextStyle(fontSize: 12),
+                    textStyle: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  labelStyle: const TextStyle(fontSize: 12),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                  majorGridLines: MajorGridLines(
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                  ),
+                  axisLine: AxisLine(
+                    color: Theme.of(context).dividerColor,
+                  ),
                 ),
                 series: <CartesianSeries<ChartData, String>>[
                   ColumnSeries<ChartData, String>(
@@ -54,9 +77,14 @@ class LoadingHoursChart extends StatelessWidget {
                       topLeft: Radius.circular(4),
                       topRight: Radius.circular(4),
                     ),
-                    dataLabelSettings: const DataLabelSettings(
+                    dataLabelSettings: DataLabelSettings(
                       isVisible: true,
                       labelAlignment: ChartDataLabelAlignment.top,
+                      textStyle: TextStyle(
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],

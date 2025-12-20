@@ -16,13 +16,13 @@ class SummaryBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(color: Colors.grey.shade300),
+          top: BorderSide(color: Theme.of(context).dividerColor),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -50,7 +50,7 @@ class SummaryBar extends StatelessWidget {
             color: Colors.orange,
           ),
           _SummaryItem(
-            icon: Icons.attach_money,
+            icon: Icons.currency_ruble,
             label: 'Затраты на оплату',
             value: statistics.costFormatted,
             color: Colors.purple,
@@ -86,7 +86,7 @@ class _SummaryItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
           ),
           textAlign: TextAlign.center,
         ),

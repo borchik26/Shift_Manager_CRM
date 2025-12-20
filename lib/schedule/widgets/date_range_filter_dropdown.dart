@@ -20,9 +20,9 @@ class DateRangeFilterDropdown extends StatelessWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: DropdownButton<DateRangeFilter>(
         value: selectedFilter,

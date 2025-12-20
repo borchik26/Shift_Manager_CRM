@@ -28,6 +28,9 @@ CRM система для управления персоналом, филиа�
 - ✅ Drag & Drop для перемещения смен
 - ✅ Конфликты смен (детекция пересечений)
 - ✅ Dashboard с статистикой
+- ✅ Журнал аудита (Audit Logs) для отслеживания всех изменений
+- ✅ Адаптивный дизайн (мобильные и десктопные версии)
+- ✅ Система уведомлений (Toast)
 
 ## Архитектура
 
@@ -70,8 +73,8 @@ CRM система для управления персоналом, филиа�
 ## Технологический стек
 
 ### Frontend
-- **Flutter** 3.8.0+ - 
-- **Dart** 3.8.0+ 
+- **Flutter** 3.8.0+
+- **Dart** 3.8.0+
 
 ### Backend & Data
 
@@ -85,6 +88,16 @@ CRM система для управления персоналом, филиа�
 - Real-time обновления для синхронизации данных между клиентами
 
 **Расположение**: `lib/core/config/supabase_config.dart`, `lib/data/services/supabase_api_service.dart`
+
+#### flutter_dotenv (^5.2.1)
+**Назначение**: Загрузка переменных окружения из .env файла для безопасного хранения конфигурации.
+
+**Использование в проекте**:
+- Хранение Supabase URL и ключей
+- Разделение конфигурации для локальной и production среды
+- Защита чувствительных данных от попадания в репозиторий
+
+**Расположение**: `.env` (не в git), `lib/core/config/supabase_config.dart`
 
 ---
 
@@ -263,73 +276,81 @@ CRM система для управления персоналом, филиа�
 
 ```
 lib/
-├── auth/                          # Модуль авторизации
-│   ├── viewmodels/               # AuthViewModel, RegistrationViewModel
-│   └── views/                    # LoginView, RegistrationView
+├── audit_logs/                   # Модуль журнала аудита
+│   ├── models/                  # AuditLogConstants, AuditLogFilter
+│   ├── viewmodels/             # AuditLogsViewModel, AuditLogDataSource
+│   ├── views/                  # AuditLogsView
+│   └── widgets/                # Диалоги и виджеты для аудита
 │
-├── branches/                      # Управление филиалами
+├── auth/                         # Модуль авторизации
+│   ├── viewmodels/              # AuthViewModel, RegistrationViewModel
+│   └── views/                   # LoginView, RegistrationView
+│
+├── branches/                     # Управление филиалами
 │   ├── branch_view_model.dart
 │   ├── branch_view.dart
-│   └── widgets/                  # CreateBranchDialog, EditBranchDialog
+│   └── widgets/                 # CreateBranchDialog, EditBranchDialog
 │
-├── config/                        # Конфигурация приложения
-│   ├── locator_config.dart       # Dependency Injection setup
-│   └── route_config.dart         # Роутинг конфигурация
+├── config/                       # Конфигурация приложения
+│   ├── locator_config.dart      # Dependency Injection setup
+│   └── route_config.dart        # Роутинг конфигурация
 │
 ├── core/                         # Ядро приложения
-│   ├── abstractions/             # Абстракции (logging)
-│   ├── config/                   # Конфигурация (Supabase)
-│   ├── constants/                # Константы (API endpoints, app constants)
-│   ├── services/                 # App Services (AuthService)
-│   ├── ui/                       # UI компоненты и темы
+│   ├── config/                  # Конфигурация (Supabase)
+│   ├── constants/               # Константы приложения
+│   ├── services/                # App Services (AuthService)
+│   ├── ui/                      # UI компоненты и темы
 │   │   ├── app_theme.dart
-│   │   ├── constants/            # Colors, spacing, text styles
-│   │   └── widgets/              # Переиспользуемые виджеты
-│   └── utils/                    # Утилиты
-│       ├── async_value.dart      # AsyncValue для состояния
-│       ├── error_handler.dart    # Обработка ошибок
-│       ├── locator.dart          # DI контейнер
-│       ├── navigation/           # Навигация и роутинг
-│       ├── http/                 # HTTP клиент и interceptors
-│       └── retry/                # Retry logic и circuit breaker
+│   │   ├── constants/           # Colors, spacing, text styles, breakpoints
+│   │   └── widgets/             # Переиспользуемые виджеты
+│   └── utils/                   # Утилиты
+│       ├── async_value.dart     # AsyncValue для состояния
+│       ├── error_handler.dart   # Обработка ошибок
+│       ├── locator.dart         # DI контейнер
+│       ├── navigation/          # Навигация и роутинг (BestRouter)
+│       ├── http/                # HTTP клиент и interceptors
+│       ├── retry/               # Retry logic и circuit breaker
+│       ├── internal_notification/ # NotifyService и Toast система
+│       ├── exceptions/          # Кастомные исключения
+│       └── date_formatter.dart  # Форматирование дат
 │
 ├── dashboard/                    # Главная панель
-│   ├── models/                   # DashboardStats, DashboardAlert
+│   ├── models/                  # DashboardStats, DashboardAlert
 │   ├── viewmodels/              # DashboardViewModel
 │   ├── views/                   # DashboardView, HomeView
-│   └── widgets/                 # Статистические виджеты
+│   └── widgets/                 # Статистические виджеты и графики
 │
 ├── data/                         # Слой данных
-│   ├── models/                  # Модели данных (Employee, Shift, Branch, Position)
+│   ├── models/                  # Модели данных (Employee, Shift, Branch, Position, AuditLog)
 │   ├── repositories/            # Репозитории (абстракции доступа к данным)
-│   └── services/                # ApiService, SupabaseApiService, MockApiService
+│   └── services/                # ApiService, SupabaseApiService
 │
-├── employees_syncfusion/        # Модуль управления сотрудниками
+├── employees_syncfusion/         # Модуль управления сотрудниками
 │   ├── models/                  # EmployeeSyncfusionModel, ProfileModel
-│   ├── viewmodels/             # EmployeeSyncfusionViewModel, ProfileViewModel
-│   ├── views/                  # EmployeeSyncfusionView, ProfileView
-│   └── widgets/                # Диалоги и фильтры
+│   ├── viewmodels/              # EmployeeSyncfusionViewModel, ProfileViewModel, UserApprovalViewModel
+│   ├── views/                   # EmployeeSyncfusionView, ProfileView
+│   └── widgets/                 # Диалоги и фильтры
 │
-├── positions/                   # Управление должностями
+├── positions/                    # Управление должностями
 │   ├── position_view_model.dart
 │   ├── position_view.dart
-│   └── widgets/                # CreatePositionDialog, EditPositionDialog
+│   └── widgets/                 # CreatePositionDialog, EditPositionDialog
 │
-├── schedule/                    # Модуль расписания смен
-│   ├── constants/              # Константы расписания
-│   ├── models/                 # ShiftModel, ShiftAdapter, фильтры
-│   ├── utils/                  # ShiftConflictChecker, ScheduleStatistics
-│   ├── viewmodels/             # ScheduleViewModel, ShiftDataSource
-│   ├── views/                  # ScheduleView, MobileScheduleGridView
-│   └── widgets/                # Виджеты календаря смен
+├── schedule/                     # Модуль расписания смен
+│   ├── constants/               # Константы расписания и фильтры
+│   ├── models/                  # ShiftModel, ShiftAdapter, фильтры
+│   ├── utils/                   # ShiftConflictChecker, ScheduleStatistics
+│   ├── viewmodels/              # ScheduleViewModel, ShiftDataSource
+│   ├── views/                   # ScheduleView, MobileScheduleGridView
+│   └── widgets/                 # Виджеты календаря смен
 │
-├── startup/                     # Инициализация приложения
+├── startup/                      # Инициализация приложения
 │   ├── startup_view_model.dart
 │   └── startup_view.dart
 │
-├── home/                        # Главная страница
-├── not_found/                   # 404 страница
-└── main.dart                    # Точка входа
+├── home/                         # Главная страница (устаревший модуль)
+├── not_found/                    # 404 страница
+└── main.dart                     # Точка входа
 ```
 
 ## База данных
@@ -344,11 +365,12 @@ lib/
    - `first_name`, `last_name` (TEXT)
    - `role` (TEXT) - 'employee' или 'manager'
    - `status` (TEXT) - 'active', 'inactive', 'pending'
-   - `branch_id` (UUID, FK → branches.id)
-   - `position` (TEXT) - Название должности
-   - `hourly_rate` (NUMERIC) - Почасовая ставка
-   - `hire_date` (TIMESTAMP)
+   - `branch_id` (UUID, FK → branches.id, nullable)
+   - `position` (TEXT, nullable) - Название должности
+   - `hourly_rate` (NUMERIC, nullable) - Почасовая ставка
+   - `hire_date` (TIMESTAMP, nullable)
    - `avatar_url`, `phone`, `address` (TEXT, nullable)
+   - `created_at`, `updated_at` (TIMESTAMP)
 
 2. **branches** - Филиалы компании
    - `id` (UUID, PK)
@@ -364,11 +386,11 @@ lib/
 
 4. **shifts** - Смены
    - `id` (UUID, PK)
-   - `employee_id` (UUID, FK → profiles.id)
+   - `employee_id` (UUID, FK → profiles.id, nullable)
    - `start_time`, `end_time` (TIMESTAMP)
    - `role_title` (TEXT) - Название роли
    - `location` (TEXT) - Локация филиала
-   - `status` (TEXT) - 'confirmed', 'swap_requested'
+   - `status` (TEXT) - 'confirmed', 'swap_requested', 'pending', 'scheduled', 'vacation', 'sick_leave'
    - `hourly_rate` (NUMERIC) - Ставка для конкретной смены
    - `is_night_shift` (BOOLEAN)
    - `employee_preferences` (TEXT, nullable)
@@ -396,8 +418,23 @@ lib/
 ### Миграции
 
 Миграции находятся в `supabase/migrations/`:
-- Миграции применяются автоматически при `supabase start`
-- Для production: использовать Supabase Dashboard или CLI
+- `20251213000000_base_schema.sql` - Базовая схема БД
+- `20251214093110_fix_create_profile_trigger.sql` - Исправление триггера создания профиля
+- `20251214140000_fix_audit_triggers_security.sql` - Исправление безопасности триггеров аудита
+- `20251218202042_auto_confirm_emails.sql` - Автоподтверждение email
+- `20251218234501_allow_employees_update_shifts.sql` - Разрешение сотрудникам обновлять смены
+- `20251218235101_disable_shifts_rls.sql` - Отключение RLS для смен
+- `20251218235414_add_scheduled_status.sql` - Добавление статуса 'scheduled'
+- `20251219000236_create_log_audit_event_function.sql` - Создание функции логирования аудита
+- `20251219084508_add_address_to_branches.sql` - Добавление адреса к филиалам
+- `20251219122000_remove_duplicate_audit_triggers.sql` - Удаление дублирующихся триггеров
+- `20251219123000_add_audit_logs_delete_policy.sql` - Добавление политики удаления для audit_logs
+- `20251220000000_add_missing_profile_fields.sql` - Добавление недостающих полей в profiles
+- `20251220000100_add_vacation_sick_leave_statuses.sql` - Добавление статусов отпуска и больничного
+- `20251220000200_make_employee_id_nullable.sql` - Сделать employee_id nullable в shifts
+- `20251220000300_add_pending_scheduled_shift_statuses.sql` - Добавление статусов pending и scheduled
+
+Миграции применяются автоматически при `supabase start` или через `supabase db push` для production.
 
 ## Установка и настройка
 

@@ -10,6 +10,7 @@ import 'package:my_app/employees_syncfusion/views/employee_syncfusion_view.dart'
 import 'package:my_app/not_found/not_found_view.dart';
 import 'package:my_app/schedule/views/schedule_view.dart';
 import 'package:my_app/positions/position_view.dart';
+import 'package:my_app/audit_logs/views/audit_logs_view.dart';
 
 final routes = [
   // Home -> Redirect to Login
@@ -94,6 +95,17 @@ final routes = [
       key: key,
       currentPath: '/dashboard/positions',
       child: const PositionView(),
+    ),
+    requiresAuth: true,
+  ),
+
+  // Audit Logs - REQUIRES AUTH (Manager only)
+  RouteEntry(
+    path: '/dashboard/audit-logs',
+    builder: (key, routeData) => DashboardView(
+      key: key,
+      currentPath: '/dashboard/audit-logs',
+      child: const AuditLogsView(),
     ),
     requiresAuth: true,
   ),

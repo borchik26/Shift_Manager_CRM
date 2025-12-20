@@ -15,6 +15,21 @@ class DashboardView extends StatelessWidget {
   });
 
   int _getSelectedIndex(String currentPath) {
+    final authService = locator<AuthService>();
+
+    // For employee: map filtered indices
+    if (authService.isEmployee) {
+      if (currentPath == '/dashboard') {
+        return 0; // Главная
+      } else if (currentPath.startsWith('/dashboard/employees')) {
+        return 1; // Сотрудники
+      } else if (currentPath.startsWith('/dashboard/schedule')) {
+        return 2; // График
+      }
+      return 0;
+    }
+
+    // For manager: keep original logic
     if (currentPath.startsWith('/dashboard/branches')) {
       return 1;
     } else if (currentPath.startsWith('/dashboard/positions')) {
@@ -23,6 +38,8 @@ class DashboardView extends StatelessWidget {
       return 3;
     } else if (currentPath.startsWith('/dashboard/schedule')) {
       return 4;
+    } else if (currentPath.startsWith('/dashboard/audit-logs')) {
+      return 5;
     }
     return 0;
   }
@@ -52,6 +69,9 @@ class DashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedIndex = _getSelectedIndex(currentPath);
     final isDesktop = MediaQuery.of(context).size.width > 900;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final authService = locator<AuthService>();
 
     final destinations = [
       _NavigationItem(
@@ -84,7 +104,18 @@ class DashboardView extends StatelessWidget {
         selectedIcon: Icons.calendar_month,
         path: '/dashboard/schedule',
       ),
+      _NavigationItem(
+        label: 'Логи',
+        icon: Icons.history_outlined,
+        selectedIcon: Icons.history,
+        path: '/dashboard/audit-logs',
+      ),
     ];
+
+    // Filter destinations based on role
+    final filteredDestinations = authService.isEmployee
+        ? [destinations[0], destinations[3], destinations[4]] // Главная, Сотрудники, График
+        : destinations; // All items for manager
 
     return Scaffold(
       body: Row(
@@ -93,15 +124,33 @@ class DashboardView extends StatelessWidget {
             NavigationRail(
               selectedIndex: selectedIndex,
               onDestinationSelected: (index) {
-                final destination = destinations[index];
+                final destination = filteredDestinations[index];
                 _navigateTo(destination.path);
               },
               labelType: NavigationRailLabelType.all,
-              leading: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.0),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              selectedIconTheme: IconThemeData(
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+              unselectedIconTheme: IconThemeData(
+                color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade500,
+              ),
+              selectedLabelTextStyle: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelTextStyle: TextStyle(
+                color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade500,
+              ),
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: CircleAvatar(
                   radius: 24,
-                  child: Icon(Icons.person),
+                  backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+                  child: Icon(
+                    Icons.person,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
                 ),
               ),
               trailing: Expanded(
@@ -113,11 +162,12 @@ class DashboardView extends StatelessWidget {
                       icon: const Icon(Icons.logout),
                       onPressed: _logout,
                       tooltip: 'Выйти',
+                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
                     ),
                   ),
                 ),
               ),
-              destinations: destinations
+              destinations: filteredDestinations
                   .map(
                     (item) => NavigationRailDestination(
                       icon: Icon(item.icon),
@@ -144,10 +194,15 @@ class DashboardView extends StatelessWidget {
           ? BottomNavigationBar(
               currentIndex: selectedIndex,
               onTap: (index) {
-                final destination = destinations[index];
+                final destination = filteredDestinations[index];
                 _navigateTo(destination.path);
               },
-              items: destinations
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              selectedItemColor: isDarkMode ? Colors.white : Colors.black,
+              unselectedItemColor: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade500,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+              type: BottomNavigationBarType.fixed,
+              items: filteredDestinations
                   .map(
                     (item) => BottomNavigationBarItem(
                       icon: Icon(item.icon),

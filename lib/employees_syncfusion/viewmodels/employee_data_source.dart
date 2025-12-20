@@ -169,21 +169,21 @@ class EmployeeDataSource extends DataGridSource {
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
+              ElevatedButton(
                 onPressed: () => onDeleteEmployee(employeeId),
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 24,
-                ),
-                color: Colors.red.shade700,
-                tooltip: 'Удалить сотрудника',
-                style: IconButton.styleFrom(
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
                   backgroundColor: Colors.red.shade50,
-                  padding: const EdgeInsets.all(12),
-                  minimumSize: const Size(40, 40),
+                  foregroundColor: Colors.red.shade700,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                ),
+                child: const Icon(
+                  Icons.delete_outline,
+                  size: 20,
                 ),
               ),
             ],

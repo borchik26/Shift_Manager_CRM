@@ -492,14 +492,11 @@ class _CreateShiftDialogState extends State<CreateShiftDialog> {
 
       final shift = Shift(
         id: widget.existingShift?.id ?? const Uuid().v4(),
-        employeeId:
-            _selectedEmployeeId ??
-            'unassigned', // Use 'unassigned' if no employee selected
+        employeeId: _selectedEmployeeId, // null if no employee selected
         location: _selectedBranch!,
         startTime: startDateTime,
         endTime: endDateTime,
-        status:
-            'pending', // will be overridden by DB default/constraint in service
+        status: 'scheduled',
         employeePreferences: _preferencesController.text.trim().isNotEmpty
             ? _preferencesController.text.trim()
             : null,

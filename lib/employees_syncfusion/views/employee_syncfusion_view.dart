@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
+import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/responsive_helper.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
@@ -24,16 +25,37 @@ class EmployeeSyncfusionView extends StatefulWidget {
 
 class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     with SingleTickerProviderStateMixin {
-  late final EmployeeSyncfusionViewModel _viewModel;
+  EmployeeSyncfusionViewModel? _viewModel;
   final TextEditingController _searchController = TextEditingController();
   String? _selectedBranch;
   String? _selectedRole;
   EmployeeStatus? _selectedStatus;
-  late final TabController _tabController;
+  TabController? _tabController;
+  bool _isEmployee = false;
 
   @override
   void initState() {
     super.initState();
+
+    final authService = locator<AuthService>();
+
+    // If employee - redirect to own profile
+    if (authService.isEmployee) {
+      _isEmployee = true;
+      final currentUserId = authService.currentUser?.id;
+      if (currentUserId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            locator<RouterService>().replace(
+              Path(name: '/dashboard/employees/$currentUserId'),
+            );
+          }
+        });
+      }
+      return; // Skip ViewModel initialization
+    }
+
+    // For manager - normal initialization
     _tabController = TabController(length: 2, vsync: this);
     _viewModel = EmployeeSyncfusionViewModel(
       employeeRepository: locator<EmployeeRepository>(),
@@ -42,7 +64,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       positionRepository: locator<PositionRepository>(),
       context: context,
     );
-    _viewModel.setDeleteCallback(_onDeleteEmployee);
+    _viewModel!.setDeleteCallback(_onDeleteEmployee);
   }
 
   Future<void> _onDeleteEmployee(String employeeId) async {
@@ -74,7 +96,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
 
     if (confirmed == true && mounted) {
       try {
-        await _viewModel.deleteEmployee(employeeId);
+        await _viewModel!.deleteEmployee(employeeId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -105,21 +127,30 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     if (result == true && mounted) {
       // Dialog returned true - employee was created
       // Reload the employee list to show the new employee
-      await _viewModel.reloadEmployees();
+      await _viewModel!.reloadEmployees();
     }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _tabController.dispose();
-    _viewModel.dispose();
+    _tabController?.dispose();
+    _viewModel?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveHelper.isMobile(context);
+
+    // If employee and redirecting, show loading
+    if (_isEmployee) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -171,7 +202,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: Colors.grey.shade300,
+                    color: Theme.of(context).dividerColor,
                     width: 1,
                   ),
                 ),
@@ -211,6 +242,11 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
 
   /// Build the employee list content
   Widget _buildEmployeeContent(bool isMobile) {
+    // Ensure _viewModel is initialized
+    if (_viewModel == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Container(
       padding: EdgeInsets.only(
         left: isMobile ? 12 : 16,
@@ -219,14 +255,14 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         bottom: 0,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
           // Filters Row - адаптивный
           AnimatedBuilder(
-            animation: _viewModel,
+            animation: _viewModel!,
             builder: (context, _) {
               final isMobile = ResponsiveHelper.isMobile(context);
 
@@ -275,7 +311,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                             _selectedStatus = null;
                             _searchController.clear();
                           });
-                          _viewModel.clearFilters();
+                          _viewModel!.clearFilters();
                         },
                         icon: const Icon(Icons.clear, size: 18),
                         label: const Text('Сбросить'),
@@ -295,10 +331,10 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.grey.shade300,
+                          color: Theme.of(context).dividerColor,
                         ),
                       ),
                       child: TextField(
@@ -307,7 +343,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                           hintText: 'Поиск',
                           hintStyle: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                           ),
                           suffixIcon: const Icon(
                             Icons.search,
@@ -329,7 +365,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                         style: const TextStyle(fontSize: 14),
                         textAlignVertical: TextAlignVertical.center,
                         onChanged: (value) {
-                          _viewModel.searchByName(value);
+                          _viewModel!.searchByName(value);
                           setState(() {});
                         },
                       ),
@@ -348,7 +384,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
 
           // Счетчик отфильтрованных сотрудников
           AnimatedBuilder(
-            animation: _viewModel,
+            animation: _viewModel!,
             builder: (context, _) {
               final isMobile = ResponsiveHelper.isMobile(context);
 
@@ -357,10 +393,10 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                   horizontal: isMobile ? 0 : 12,
                 ),
                 child: Text(
-                  'Показано: ${_viewModel.filteredCount} из ${_viewModel.totalCount} сотрудников',
+                  'Показано: ${_viewModel!.filteredCount} из ${_viewModel!.totalCount} сотрудников',
                   style: TextStyle(
                     fontSize: isMobile ? 12 : 13,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -377,7 +413,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
           // Table or Mobile List - ADAPTIVE
           Expanded(
             child: AnimatedBuilder(
-              animation: _viewModel,
+              animation: _viewModel!,
               builder: (context, _) {
                 final isMobile = ResponsiveHelper.isMobile(
                   context,
@@ -399,8 +435,8 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         initialBranch: _selectedBranch,
         initialRole: _selectedRole,
         initialStatus: _selectedStatus,
-        availableBranches: _viewModel.availableBranches,
-        availableRoles: _viewModel.availableRoles,
+        availableBranches: _viewModel!.availableBranches,
+        availableRoles: _viewModel!.availableRoles,
       ),
     );
 
@@ -412,16 +448,16 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
           _selectedStatus = null;
           _searchController.clear();
         });
-        _viewModel.clearFilters();
+        _viewModel!.clearFilters();
       } else {
         setState(() {
           _selectedBranch = result['branch'];
           _selectedRole = result['role'];
           _selectedStatus = result['status'];
         });
-        _viewModel.filterByBranch(_selectedBranch);
-        _viewModel.filterByRole(_selectedRole);
-        _viewModel.filterByStatus(_selectedStatus);
+        _viewModel!.filterByBranch(_selectedBranch);
+        _viewModel!.filterByRole(_selectedRole);
+        _viewModel!.filterByStatus(_selectedStatus);
       }
     }
   }
@@ -430,9 +466,9 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: DropdownButton<String>(
         value: _selectedBranch,
@@ -454,12 +490,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         ),
         underline: const SizedBox(),
         icon: const SizedBox(),
-        items: _viewModel.availableBranches.map((branch) {
+        items: _viewModel!.availableBranches.map((branch) {
           return DropdownMenuItem(value: branch, child: Text(branch));
         }).toList(),
         onChanged: (value) {
           setState(() => _selectedBranch = value);
-          _viewModel.filterByBranch(value);
+          _viewModel!.filterByBranch(value);
         },
       ),
     );
@@ -469,9 +505,9 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: DropdownButton<String>(
         value: _selectedRole,
@@ -493,12 +529,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         ),
         underline: const SizedBox(),
         icon: const SizedBox(),
-        items: _viewModel.availableRoles.map((role) {
+        items: _viewModel!.availableRoles.map((role) {
           return DropdownMenuItem(value: role, child: Text(role));
         }).toList(),
         onChanged: (value) {
           setState(() => _selectedRole = value);
-          _viewModel.filterByRole(value);
+          _viewModel!.filterByRole(value);
         },
       ),
     );
@@ -508,9 +544,9 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: DropdownButton<EmployeeStatus>(
         value: _selectedStatus,
@@ -553,7 +589,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         }).toList(),
         onChanged: (value) {
           setState(() => _selectedStatus = value);
-          _viewModel.filterByStatus(value);
+          _viewModel!.filterByStatus(value);
         },
       ),
     );
@@ -565,11 +601,11 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       data: SfDataGridThemeData(
         headerColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         gridLineColor: Colors.transparent,
-        rowHoverColor: Colors.grey.shade50,
+        rowHoverColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         selectionColor: Colors.transparent,
       ),
       child: SfDataGrid(
-        source: _viewModel.dataSource,
+        source: _viewModel!.dataSource,
         columns: _buildColumns(),
         columnWidthMode: ColumnWidthMode.fill,
         rowHeight: 72,
@@ -593,12 +629,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
+          child: Text(
             'Сотрудник',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -610,12 +646,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
+          child: Text(
             'Должность',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -627,12 +663,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
+          child: Text(
             'Филиал',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -644,12 +680,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
+          child: Text(
             'Статус смены',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -662,12 +698,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
-          child: const Text(
+          child: Text(
             'Отработано часов',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -679,12 +715,12 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
         label: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.center,
-          child: const Text(
+          child: Text(
             '',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -698,7 +734,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
 
   // Mobile List View with Cards
   Widget _buildMobileList() {
-    final employees = _viewModel.filteredEmployees;
+    final employees = _viewModel!.filteredEmployees;
 
     if (employees.isEmpty) {
       return Center(
@@ -708,14 +744,14 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
             Icon(
               Icons.people_outline,
               size: 64,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
               'Сотрудники не найдены',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -772,7 +808,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                               employee.role,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -829,7 +865,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                   ),
 
                   const SizedBox(height: 8),
-                  Divider(height: 1, color: Colors.grey.shade300),
+                  Divider(height: 1, color: Theme.of(context).dividerColor),
                   const SizedBox(height: 8),
 
                   // Details Grid
@@ -897,20 +933,20 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.grey.shade600),
+          Icon(icon, size: 14, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
           const SizedBox(width: 4),
           Expanded(
             child: Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade800,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
               overflow: TextOverflow.ellipsis,
             ),

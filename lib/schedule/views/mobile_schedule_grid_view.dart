@@ -74,14 +74,14 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
           Icon(
             Icons.calendar_today,
             size: 64,
-            color: Colors.grey.shade400,
+            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 16),
           Text(
             'Нет смен для отображения',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade600,
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -89,7 +89,7 @@ class _MobileScheduleGridViewState extends State<MobileScheduleGridView> {
             'Нажмите + чтобы создать смену',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
             ),
           ),
         ],
