@@ -56,6 +56,9 @@ class ScheduleViewModel extends ChangeNotifier {
   ShiftStatusFilter get statusFilter => _statusFilter;
   ScheduleViewType get currentViewType => _currentViewType;
 
+  /// Check if current user is a manager (for conditional UI rendering)
+  bool get isManager => _authService.isManager;
+
   /// Количество активных фильтров (для Badge)
   int get activeFiltersCount {
     int count = 0;

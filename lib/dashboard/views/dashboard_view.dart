@@ -3,6 +3,9 @@ import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
 import 'package:my_app/core/utils/navigation/route_data.dart';
+import 'package:my_app/dashboard/viewmodels/dashboard_view_model.dart';
+import 'package:my_app/data/repositories/employee_repository.dart';
+import 'package:my_app/data/repositories/shift_repository.dart';
 
 class DashboardView extends StatelessWidget {
   final Widget child;
@@ -13,36 +16,6 @@ class DashboardView extends StatelessWidget {
     required this.child,
     required this.currentPath,
   });
-
-  int _getSelectedIndex(String currentPath) {
-    final authService = locator<AuthService>();
-
-    // For employee: map filtered indices
-    if (authService.isEmployee) {
-      if (currentPath == '/dashboard') {
-        return 0; // Главная
-      } else if (currentPath.startsWith('/dashboard/employees')) {
-        return 1; // Сотрудники
-      } else if (currentPath.startsWith('/dashboard/schedule')) {
-        return 2; // График
-      }
-      return 0;
-    }
-
-    // For manager: keep original logic
-    if (currentPath.startsWith('/dashboard/branches')) {
-      return 1;
-    } else if (currentPath.startsWith('/dashboard/positions')) {
-      return 2;
-    } else if (currentPath.startsWith('/dashboard/employees')) {
-      return 3;
-    } else if (currentPath.startsWith('/dashboard/schedule')) {
-      return 4;
-    } else if (currentPath.startsWith('/dashboard/audit-logs')) {
-      return 5;
-    }
-    return 0;
-  }
 
   void _navigateTo(String path) {
     final routerService = locator<RouterService>();
@@ -67,11 +40,16 @@ class DashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = _getSelectedIndex(currentPath);
+    final viewModel = DashboardViewModel(
+      authService: locator<AuthService>(),
+      routerService: locator<RouterService>(),
+      employeeRepository: locator<EmployeeRepository>(),
+      shiftRepository: locator<ShiftRepository>(),
+    );
+
+    final selectedIndex = viewModel.getSelectedIndex(currentPath);
     final isDesktop = MediaQuery.of(context).size.width > 900;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    final authService = locator<AuthService>();
 
     final destinations = [
       _NavigationItem(
@@ -113,7 +91,7 @@ class DashboardView extends StatelessWidget {
     ];
 
     // Filter destinations based on role
-    final filteredDestinations = authService.isEmployee
+    final filteredDestinations = viewModel.isEmployee
         ? [destinations[0], destinations[3], destinations[4]] // Главная, Сотрудники, График
         : destinations; // All items for manager
 

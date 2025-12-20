@@ -50,6 +50,41 @@ class DashboardViewModel {
   List<Shift> get weeklyShifts => _weeklyShifts;
   List<DashboardAlert> get alerts => _alerts;
 
+  /// Check if current user is an employee
+  bool get isEmployee => _authService.isEmployee;
+
+  /// Check if current user is a manager
+  bool get isManager => _authService.isManager;
+
+  /// Get selected navigation index based on current path and user role
+  int getSelectedIndex(String currentPath) {
+    // For employee: map filtered indices
+    if (_authService.isEmployee) {
+      if (currentPath == '/dashboard') {
+        return 0; // Главная
+      } else if (currentPath.startsWith('/dashboard/employees')) {
+        return 1; // Сотрудники
+      } else if (currentPath.startsWith('/dashboard/schedule')) {
+        return 2; // График
+      }
+      return 0;
+    }
+
+    // For manager: keep original logic
+    if (currentPath.startsWith('/dashboard/branches')) {
+      return 1;
+    } else if (currentPath.startsWith('/dashboard/positions')) {
+      return 2;
+    } else if (currentPath.startsWith('/dashboard/employees')) {
+      return 3;
+    } else if (currentPath.startsWith('/dashboard/schedule')) {
+      return 4;
+    } else if (currentPath.startsWith('/dashboard/audit-logs')) {
+      return 5;
+    }
+    return 0;
+  }
+
   /// Get weekly shifts count by day (Monday-Sunday)
   List<int> get weeklyShiftsCount {
     if (_weeklyShifts.isEmpty) {
@@ -344,17 +379,6 @@ class DashboardViewModel {
         ToastEventError(message: 'Ошибка выхода: ${e.toString()}'),
       );
     }
-  }
-
-  int getSelectedIndex(String currentPath) {
-    if (currentPath.startsWith('/dashboard/employees')) {
-      return 1;
-    } else if (currentPath.startsWith('/dashboard/schedule')) {
-      return 2;
-    } else if (currentPath == '/dashboard') {
-      return 0;
-    }
-    return 0;
   }
 
   /// Dispose resources

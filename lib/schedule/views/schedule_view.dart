@@ -363,7 +363,7 @@ class _ScheduleViewState extends State<ScheduleView> {
               _buildRoleDropdown(),
               const SizedBox(width: 12),
               // Фильтр по сотруднику (только для менеджера)
-              if (locator<AuthService>().isManager)
+              if (_viewModel.isManager)
                 ValueListenableBuilder<AsyncValue<List<Employee>>>(
                   valueListenable: _viewModel.employeesState,
                   builder: (context, employeesState, _) {
@@ -379,7 +379,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                     );
                   },
                 ),
-              if (locator<AuthService>().isManager) const SizedBox(width: 12),
+              if (_viewModel.isManager) const SizedBox(width: 12),
               // Фильтр по периоду
               ListenableBuilder(
                 listenable: _viewModel,
