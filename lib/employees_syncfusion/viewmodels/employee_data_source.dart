@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
-import 'package:my_app/core/utils/locator.dart';
-import 'package:my_app/core/utils/navigation/route_data.dart';
-import 'package:my_app/core/utils/navigation/router_service.dart';
 import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dart';
 
 class EmployeeDataSource extends DataGridSource {
   EmployeeDataSource({
     required List<EmployeeSyncfusionModel> employees,
     required this.onDeleteEmployee,
-    required this.context,
+    required this.onEmployeeTap,
   }) {
     _employees = employees;
     _buildDataGridRows();
   }
 
-  final Function(String employeeId) onDeleteEmployee;
-  final BuildContext context;
+  final void Function(String employeeId) onDeleteEmployee;
+  final void Function(String employeeId) onEmployeeTap;
   List<EmployeeSyncfusionModel> _employees = [];
   List<DataGridRow> _dataGridRows = [];
 
@@ -197,11 +194,10 @@ class EmployeeDataSource extends DataGridSource {
   }
 
   void _onHistoryPressed(String employeeId) {
-    locator<RouterService>().goTo(Path(name: '/dashboard/employees/$employeeId'));
+    onEmployeeTap(employeeId);
   }
 
   // Сортировка
-  @override
   void handleSort(String columnName, DataGridSortDirection direction) {
     if (columnName == 'name') {
       _employees.sort((a, b) {

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/models/branch.dart';
 import 'package:my_app/data/repositories/branch_repository.dart';
 
@@ -9,64 +10,54 @@ class BranchViewModel extends ChangeNotifier {
   BranchViewModel({required BranchRepository branchRepository})
       : _branchRepository = branchRepository;
 
-  // State
-  List<Branch> _branches = [];
-  bool _isLoading = false;
-  String? _errorMessage;
+  AsyncValue<List<Branch>> _branchesState = const AsyncLoading();
+  AsyncValue<void> _operationState = const AsyncData(null);
 
-  // Getters
-  List<Branch> get branches => List.unmodifiable(_branches);
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get hasError => _errorMessage != null;
+  AsyncValue<List<Branch>> get branchesState => _branchesState;
+  AsyncValue<void> get operationState => _operationState;
 
   /// Load all branches from repository
   Future<void> loadBranches() async {
-    _isLoading = true;
-    _errorMessage = null;
+    _branchesState = const AsyncLoading();
     notifyListeners();
 
     try {
-      _branches = await _branchRepository.getBranches();
-      _errorMessage = null;
+      final branches = await _branchRepository.getBranches();
+      _branchesState = AsyncData(branches);
     } catch (e) {
-      _errorMessage = 'Не удалось загрузить филиалы: $e';
+      _branchesState = AsyncError('Не удалось загрузить филиалы: $e');
       debugPrint('Error loading branches: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   /// Create a new branch
   Future<bool> createBranch(String name) async {
     if (name.trim().isEmpty) {
-      _errorMessage = 'Название филиала не может быть пустым';
+      _operationState = const AsyncError('Название филиала не может быть пустым');
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
-    _errorMessage = null;
+    _operationState = const AsyncLoading();
     notifyListeners();
 
     try {
       final newBranch = Branch(
-        id: '', // Backend will generate UUID
+        id: '',
         name: name.trim(),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       final createdBranch = await _branchRepository.createBranch(newBranch);
-      _branches.add(createdBranch);
-      _errorMessage = null;
-      _isLoading = false;
+      final currentBranches = _branchesState.dataOrNull ?? [];
+      _branchesState = AsyncData([...currentBranches, createdBranch]);
+      _operationState = const AsyncData(null);
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Не удалось создать филиал: $e';
-      _isLoading = false;
+      _operationState = AsyncError('Не удалось создать филиал: $e');
       notifyListeners();
       debugPrint('Error creating branch: $e');
       return false;
@@ -76,13 +67,12 @@ class BranchViewModel extends ChangeNotifier {
   /// Update an existing branch
   Future<bool> updateBranch(Branch branch, String newName) async {
     if (newName.trim().isEmpty) {
-      _errorMessage = 'Название филиала не может быть пустым';
+      _operationState = const AsyncError('Название филиала не может быть пустым');
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
-    _errorMessage = null;
+    _operationState = const AsyncLoading();
     notifyListeners();
 
     try {
@@ -92,20 +82,19 @@ class BranchViewModel extends ChangeNotifier {
       );
 
       final result = await _branchRepository.updateBranch(updatedBranch);
-
-      // Update in local list
-      final index = _branches.indexWhere((b) => b.id == branch.id);
+      final currentBranches = _branchesState.dataOrNull ?? [];
+      final index = currentBranches.indexWhere((b) => b.id == branch.id);
       if (index != -1) {
-        _branches[index] = result;
+        final updatedList = [...currentBranches];
+        updatedList[index] = result;
+        _branchesState = AsyncData(updatedList);
       }
 
-      _errorMessage = null;
-      _isLoading = false;
+      _operationState = const AsyncData(null);
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Не удалось обновить филиал: $e';
-      _isLoading = false;
+      _operationState = AsyncError('Не удалось обновить филиал: $e');
       notifyListeners();
       debugPrint('Error updating branch: $e');
       return false;
@@ -114,23 +103,18 @@ class BranchViewModel extends ChangeNotifier {
 
   /// Delete a branch
   Future<bool> deleteBranch(String branchId) async {
-    _isLoading = true;
-    _errorMessage = null;
+    _operationState = const AsyncLoading();
     notifyListeners();
 
     try {
       await _branchRepository.deleteBranch(branchId);
-
-      // Remove from local list
-      _branches.removeWhere((b) => b.id == branchId);
-
-      _errorMessage = null;
-      _isLoading = false;
+      final currentBranches = _branchesState.dataOrNull ?? [];
+      _branchesState = AsyncData(currentBranches.where((b) => b.id != branchId).toList());
+      _operationState = const AsyncData(null);
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Не удалось удалить филиал: $e';
-      _isLoading = false;
+      _operationState = AsyncError('Не удалось удалить филиал: $e');
       notifyListeners();
       debugPrint('Error deleting branch: $e');
       return false;
@@ -139,7 +123,7 @@ class BranchViewModel extends ChangeNotifier {
 
   /// Clear error message
   void clearError() {
-    _errorMessage = null;
+    _operationState = const AsyncData(null);
     notifyListeners();
   }
 }

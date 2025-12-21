@@ -41,9 +41,15 @@ class MobileScheduleView {
                         );
                       },
                     ),
-                    label: const Text('Фильтры', style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      'Фильтры',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
@@ -57,17 +63,24 @@ class MobileScheduleView {
                       height: 36,
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'Поиск...',
+                          hintText: '',
                           hintStyle: const TextStyle(fontSize: 13),
                           prefixIcon: const Icon(Icons.search, size: 16),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 0,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(18),
-                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(18),
-                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
                         ),
                         style: const TextStyle(fontSize: 13),

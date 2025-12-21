@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/models/user_profile.dart';
 import 'package:my_app/data/repositories/auth_repository.dart';
 
@@ -6,12 +7,11 @@ import 'package:my_app/data/repositories/auth_repository.dart';
 class UserApprovalViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
 
-  List<UserProfile> _users = [];
+  AsyncValue<List<UserProfile>> _usersState = const AsyncLoading();
+  AsyncValue<void> _operationState = const AsyncData(null);
   List<UserProfile> _filteredUsers = [];
-  bool _isLoading = false;
-  String? _error;
-  String _statusFilter = ''; // '' = all, 'pending', 'active', 'inactive'
-  bool _disposed = false; // Track disposed state
+  String _statusFilter = '';
+  bool _disposed = false;
 
   UserApprovalViewModel({required AuthRepository authRepository})
       : _authRepository = authRepository;
@@ -20,12 +20,11 @@ class UserApprovalViewModel extends ChangeNotifier {
   // GETTERS
   // =====================================================
 
-  List<UserProfile> get users => _users;
+  AsyncValue<List<UserProfile>> get usersState => _usersState;
+  AsyncValue<void> get operationState => _operationState;
   List<UserProfile> get filteredUsers => _filteredUsers;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
   String get statusFilter => _statusFilter;
-  int get totalCount => _users.length;
+  int get totalCount => _usersState.dataOrNull?.length ?? 0;
   int get filteredCount => _filteredUsers.length;
 
   // =====================================================
@@ -34,18 +33,18 @@ class UserApprovalViewModel extends ChangeNotifier {
 
   /// Load all users from the profiles table
   Future<void> loadUsers() async {
-    _setLoading(true);
-    _error = null;
+    _usersState = const AsyncLoading();
+    _safeNotifyListeners();
+
     try {
-      _users = await _authRepository.getAllProfiles();
+      final users = await _authRepository.getAllProfiles();
+      _usersState = AsyncData(users);
       _applyFilters();
       _safeNotifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _usersState = AsyncError('Ошибка загрузки пользователей: $e');
       debugPrint('Error loading users: $e');
       _safeNotifyListeners();
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -58,11 +57,15 @@ class UserApprovalViewModel extends ChangeNotifier {
 
   /// Approve a user (pending -> active)
   Future<void> approveUser(String userId) async {
+    _operationState = const AsyncLoading();
+    _safeNotifyListeners();
+
     try {
       await _authRepository.updateUserStatus(userId, 'active');
+      _operationState = const AsyncData(null);
       await loadUsers();
     } catch (e) {
-      _error = 'Ошибка активации пользователя: $e';
+      _operationState = AsyncError('Ошибка активации пользователя: $e');
       debugPrint('Error approving user: $e');
       _safeNotifyListeners();
     }
@@ -70,11 +73,15 @@ class UserApprovalViewModel extends ChangeNotifier {
 
   /// Reject a user (pending -> inactive)
   Future<void> rejectUser(String userId) async {
+    _operationState = const AsyncLoading();
+    _safeNotifyListeners();
+
     try {
       await _authRepository.updateUserStatus(userId, 'inactive');
+      _operationState = const AsyncData(null);
       await loadUsers();
     } catch (e) {
-      _error = 'Ошибка отклонения пользователя: $e';
+      _operationState = AsyncError('Ошибка отклонения пользователя: $e');
       debugPrint('Error rejecting user: $e');
       _safeNotifyListeners();
     }
@@ -82,11 +89,15 @@ class UserApprovalViewModel extends ChangeNotifier {
 
   /// Delete a user completely
   Future<void> deleteUser(String userId) async {
+    _operationState = const AsyncLoading();
+    _safeNotifyListeners();
+
     try {
       await _authRepository.deleteUserProfile(userId);
+      _operationState = const AsyncData(null);
       await loadUsers();
     } catch (e) {
-      _error = 'Ошибка удаления пользователя: $e';
+      _operationState = AsyncError('Ошибка удаления пользователя: $e');
       debugPrint('Error deleting user: $e');
       _safeNotifyListeners();
     }
@@ -94,7 +105,7 @@ class UserApprovalViewModel extends ChangeNotifier {
 
   /// Clear error message
   void clearError() {
-    _error = null;
+    _operationState = const AsyncData(null);
     _safeNotifyListeners();
   }
 
@@ -102,15 +113,12 @@ class UserApprovalViewModel extends ChangeNotifier {
   // PRIVATE METHODS
   // =====================================================
 
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-  }
-
   void _applyFilters() {
+    final users = _usersState.dataOrNull ?? [];
     if (_statusFilter.isEmpty) {
-      _filteredUsers = List.from(_users);
+      _filteredUsers = List.from(users);
     } else {
-      _filteredUsers = _users.where((u) => u.status == _statusFilter).toList();
+      _filteredUsers = users.where((u) => u.status == _statusFilter).toList();
     }
   }
 

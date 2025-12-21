@@ -8,6 +8,7 @@ import 'package:my_app/audit_logs/viewmodels/audit_logs_view_model.dart';
 import 'package:my_app/audit_logs/viewmodels/audit_log_data_source.dart';
 import 'package:my_app/audit_logs/widgets/audit_log_filter_dialog.dart';
 import 'package:my_app/audit_logs/widgets/audit_log_detail_dialog.dart';
+import 'package:my_app/audit_logs/widgets/mobile_audit_logs_view.dart';
 
 /// Main audit logs screen for managers
 /// Displays system-wide audit logs with filtering and search
@@ -52,112 +53,106 @@ class _AuditLogsViewState extends State<AuditLogsView> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Логи системы'),
-        actions: [
-          // Search field
-          SizedBox(
-            width: 300,
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Поиск по описанию или email...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
+      appBar: isMobile
+          ? null
+          : AppBar(
+              title: const Text('Логи системы'),
+              actions: [
+                SizedBox(
+                  width: 300,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _viewModel.setSearchQuery('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (query) {
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (_searchController.text == query) {
+                          _viewModel.setSearchQuery(query);
+                        }
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ListenableBuilder(
+                  listenable: _viewModel,
+                  builder: (context, _) {
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.filter_list),
+                          onPressed: () => _showFilterDialog(context),
+                          tooltip: 'Фильтры',
+                        ),
+                        if (_viewModel.activeFiltersCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${_viewModel.activeFiltersCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                ListenableBuilder(
+                  listenable: _viewModel,
+                  builder: (context, _) {
+                    if (_viewModel.activeFiltersCount > 0) {
+                      return IconButton(
+                        icon: const Icon(Icons.clear_all),
                         onPressed: () {
                           _searchController.clear();
-                          _viewModel.setSearchQuery('');
+                          _viewModel.clearFilters();
                         },
-                      )
-                    : null,
-                border: InputBorder.none,
-              ),
-              onChanged: (query) {
-                // Debounce search to avoid too many queries
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (_searchController.text == query) {
-                    _viewModel.setSearchQuery(query);
-                  }
-                });
-              },
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Filter button
-          ListenableBuilder(
-            listenable: _viewModel,
-            builder: (context, _) {
-              return Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: () => _showFilterDialog(context),
-                    tooltip: 'Фильтры',
-                  ),
-                  if (_viewModel.activeFiltersCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '${_viewModel.activeFiltersCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-
-          // Clear filters button
-          ListenableBuilder(
-            listenable: _viewModel,
-            builder: (context, _) {
-              if (_viewModel.activeFiltersCount > 0) {
-                return IconButton(
-                  icon: const Icon(Icons.clear_all),
-                  onPressed: () {
-                    _searchController.clear();
-                    _viewModel.clearFilters();
+                        tooltip: 'Очистить фильтры',
+                      );
+                    }
+                    return const SizedBox.shrink();
                   },
-                  tooltip: 'Очистить фильтры',
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-          // Refresh button
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _viewModel.refresh,
-            tooltip: 'Обновить',
-          ),
-
-          // Delete all logs button
-          IconButton(
-            icon: const Icon(Icons.delete_forever),
-            onPressed: () => _showDeleteConfirmationDialog(context),
-            tooltip: 'Очистить все логи',
-            color: Colors.red,
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _viewModel.refresh,
+                  tooltip: 'Обновить',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever),
+                  onPressed: () => _showDeleteConfirmationDialog(context),
+                  tooltip: 'Очистить все логи',
+                  color: Colors.red,
+                ),
+                const SizedBox(width: 16),
+              ],
+            ),
       body: ValueListenableBuilder<AsyncValue<dynamic>>(
         valueListenable: _viewModel.state,
         builder: (context, state, _) {
@@ -184,16 +179,21 @@ class _AuditLogsViewState extends State<AuditLogsView> {
               ),
             ),
             data: (_) {
+              if (isMobile) {
+                return MobileAuditLogsView.build(
+                  context: context,
+                  viewModel: _viewModel,
+                  searchController: _searchController,
+                  scrollController: _scrollController,
+                );
+              }
+
               if (_viewModel.logs.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.history,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
+                      const Icon(Icons.history, size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
                         'Логи не найдены',
@@ -206,12 +206,10 @@ class _AuditLogsViewState extends State<AuditLogsView> {
                 );
               }
 
-              // Update data source
               _dataSource.updateData(_viewModel.logs);
 
               return Column(
                 children: [
-                  // Info bar
                   ListenableBuilder(
                     listenable: _viewModel,
                     builder: (context, _) {
@@ -244,8 +242,6 @@ class _AuditLogsViewState extends State<AuditLogsView> {
                       );
                     },
                   ),
-
-                  // DataGrid
                   Expanded(
                     child: SfDataGrid(
                       source: _dataSource,
@@ -261,8 +257,7 @@ class _AuditLogsViewState extends State<AuditLogsView> {
                       onCellTap: (details) {
                         if (details.rowColumnIndex.rowIndex > 0) {
                           final rowIndex = details.rowColumnIndex.rowIndex - 1;
-                          if (rowIndex >= 0 &&
-                              rowIndex < _viewModel.logs.length) {
+                          if (rowIndex >= 0 && rowIndex < _viewModel.logs.length) {
                             final log = _viewModel.logs[rowIndex];
                             _showDetailDialog(context, log);
                           }

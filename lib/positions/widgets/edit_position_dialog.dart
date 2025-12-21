@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/models/position.dart';
 import 'package:my_app/positions/position_view_model.dart';
 
@@ -86,7 +87,7 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.viewModel.errorMessage ?? 'Ошибка обновления должности'),
+          content: Text(widget.viewModel.operationState.errorOrNull ?? 'Ошибка обновления должности'),
           backgroundColor: Colors.red,
         ),
       );
@@ -123,7 +124,8 @@ class _EditPositionDialogState extends State<EditPositionDialog> {
 
                   // Check for duplicate position name (excluding current position)
                   final trimmedValue = value.trim();
-                  final isDuplicate = widget.viewModel.positions.any(
+                  final positions = widget.viewModel.positionsState.dataOrNull ?? [];
+                  final isDuplicate = positions.any(
                     (p) => p.name.toLowerCase() == trimmedValue.toLowerCase() &&
                            p.id != widget.position.id,
                   );

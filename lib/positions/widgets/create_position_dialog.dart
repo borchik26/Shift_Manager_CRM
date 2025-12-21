@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/positions/position_view_model.dart';
 
 /// Dialog for creating a new position
@@ -66,7 +67,7 @@ class _CreatePositionDialogState extends State<CreatePositionDialog> {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.viewModel.errorMessage ?? 'Ошибка создания должности'),
+          content: Text(widget.viewModel.operationState.errorOrNull ?? 'Ошибка создания должности'),
           backgroundColor: Colors.red,
         ),
       );
@@ -103,7 +104,8 @@ class _CreatePositionDialogState extends State<CreatePositionDialog> {
 
                   // Check for duplicate position name
                   final trimmedValue = value.trim();
-                  final isDuplicate = widget.viewModel.positions.any(
+                  final positions = widget.viewModel.positionsState.dataOrNull ?? [];
+                  final isDuplicate = positions.any(
                     (p) => p.name.toLowerCase() == trimmedValue.toLowerCase(),
                   );
 

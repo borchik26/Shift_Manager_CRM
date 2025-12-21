@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/core/utils/internal_notification/toast/toast_event.dart';
@@ -196,16 +197,16 @@ class _UserApprovalTabState extends State<UserApprovalTab> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        if (_viewModel.isLoading) {
+        if (_viewModel.usersState.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (_viewModel.error != null) {
+        if (_viewModel.usersState.hasError) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Ошибка: ${_viewModel.error}'),
+                Text('Ошибка: ${_viewModel.usersState.errorOrNull}'),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _viewModel.loadUsers,

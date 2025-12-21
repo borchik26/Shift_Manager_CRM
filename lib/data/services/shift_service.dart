@@ -134,7 +134,7 @@ class ShiftService extends BaseSupabaseService<Shift> {
       actionType: AuditLogActionType.delete,
       entityType: AuditLogEntityType.shift,
       entityId: id,
-      description: 'Deleted shift',
+      description: 'Удаление смены',
       changesBefore: shift?.toJson(),
       metadata: {'source': 'schedule'},
     );
@@ -153,26 +153,28 @@ class ShiftService extends BaseSupabaseService<Shift> {
     if (currentUser == null) return;
 
     dart_async.unawaited(
-      Supabase.instance.client.rpc(
-        'log_audit_event',
-        params: {
-          'p_user_id': currentUser.id,
-          'p_user_email': currentUser.email ?? 'unknown',
-          'p_action_type': actionType,
-          'p_entity_type': entityType,
-          'p_user_name': currentUser.userMetadata?['full_name'],
-          'p_user_role': currentUser.userMetadata?['role'] ?? 'employee',
-          'p_entity_id': entityId,
-          'p_status': 'success',
-          'p_description': description ?? '$actionType $entityType',
-          'p_changes': changesBefore != null && changesAfter != null
-              ? {'before': changesBefore, 'after': changesAfter}
-              : (changesAfter ?? changesBefore),
-          'p_metadata': metadata,
-        },
-      ).catchError((e) {
-        debugPrint('Audit log error: $e');
-      }),
+      Supabase.instance.client
+          .rpc(
+            'log_audit_event',
+            params: {
+              'p_user_id': currentUser.id,
+              'p_user_email': currentUser.email ?? 'unknown',
+              'p_action_type': actionType,
+              'p_entity_type': entityType,
+              'p_user_name': currentUser.userMetadata?['full_name'],
+              'p_user_role': currentUser.userMetadata?['role'] ?? 'employee',
+              'p_entity_id': entityId,
+              'p_status': 'success',
+              'p_description': description ?? '$actionType $entityType',
+              'p_changes': changesBefore != null && changesAfter != null
+                  ? {'before': changesBefore, 'after': changesAfter}
+                  : (changesAfter ?? changesBefore),
+              'p_metadata': metadata,
+            },
+          )
+          .catchError((e) {
+            debugPrint('Audit log error: $e');
+          }),
     );
   }
 }

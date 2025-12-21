@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/branches/branch_view_model.dart';
 import 'package:my_app/data/models/branch.dart';
 
@@ -61,7 +62,7 @@ class _EditBranchDialogState extends State<EditBranchDialog> {
       // Error message is handled by ViewModel and shown in parent
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.viewModel.errorMessage ?? 'Ошибка обновления филиала'),
+          content: Text(widget.viewModel.operationState.errorOrNull ?? 'Ошибка обновления филиала'),
           backgroundColor: Colors.red,
         ),
       );
@@ -95,7 +96,8 @@ class _EditBranchDialogState extends State<EditBranchDialog> {
 
               // Check for duplicate branch name (excluding current branch)
               final trimmedValue = value.trim();
-              final isDuplicate = widget.viewModel.branches.any(
+              final branches = widget.viewModel.branchesState.dataOrNull ?? [];
+              final isDuplicate = branches.any(
                 (b) => b.name.toLowerCase() == trimmedValue.toLowerCase() &&
                        b.id != widget.branch.id,
               );

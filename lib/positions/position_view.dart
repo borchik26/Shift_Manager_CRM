@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/positions/position_view_model.dart';
 import 'package:my_app/positions/widgets/create_position_dialog.dart';
 import 'package:my_app/positions/widgets/edit_position_dialog.dart';
@@ -92,6 +93,7 @@ class _PositionViewState extends State<PositionView> {
     if (confirmed == true) {
       final success = await _viewModel.deletePosition(position.id);
       if (mounted) {
+        final operationError = _viewModel.operationState.errorOrNull;
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -102,7 +104,7 @@ class _PositionViewState extends State<PositionView> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_viewModel.errorMessage ?? 'Ошибка удаления должности'),
+              content: Text(operationError ?? 'Ошибка удаления должности'),
               backgroundColor: Colors.red,
             ),
           );
@@ -137,19 +139,16 @@ class _PositionViewState extends State<PositionView> {
       body: ListenableBuilder(
         listenable: _viewModel,
         builder: (context, _) {
-          if (_viewModel.isLoading && _viewModel.positions.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (_viewModel.hasError && _viewModel.positions.isEmpty) {
-            return Center(
+          return _viewModel.positionsState.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (message) => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   Text(
-                    _viewModel.errorMessage ?? 'Произошла ошибка',
+                    message,
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -161,43 +160,43 @@ class _PositionViewState extends State<PositionView> {
                   ),
                 ],
               ),
-            );
-          }
-
-          if (_viewModel.positions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.badge_outlined, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Должности отсутствуют',
-                    style: Theme.of(context).textTheme.titleLarge,
+            ),
+            data: (positions) {
+              if (positions.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.badge_outlined, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Должности отсутствуют',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Добавьте первую должность',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey,
+                            ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: _showCreateDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Добавить должность'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Добавьте первую должность',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: _showCreateDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Добавить должность'),
-                  ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
-          final isDesktop = MediaQuery.of(context).size.width >= 600;
-
-          return RefreshIndicator(
-            onRefresh: _loadPositions,
-            child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+              final isDesktop = MediaQuery.of(context).size.width >= 600;
+              return RefreshIndicator(
+                onRefresh: _loadPositions,
+                child: isDesktop ? _buildDesktopLayout(positions) : _buildMobileLayout(positions),
+              );
+            },
           );
         },
       ),
@@ -210,12 +209,12 @@ class _PositionViewState extends State<PositionView> {
     );
   }
 
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(List<Position> positions) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _viewModel.positions.length,
+      itemCount: positions.length,
       itemBuilder: (context, index) {
-        final position = _viewModel.positions[index];
+        final position = positions[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
@@ -271,7 +270,7 @@ class _PositionViewState extends State<PositionView> {
     );
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(List<Position> positions) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Card(
@@ -313,10 +312,10 @@ class _PositionViewState extends State<PositionView> {
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _viewModel.positions.length,
+              itemCount: positions.length,
               separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final position = _viewModel.positions[index];
+                final position = positions[index];
                 return InkWell(
                   onTap: () => _showEditDialog(position),
                   child: Padding(

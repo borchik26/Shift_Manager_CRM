@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
-import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/dashboard/viewmodels/dashboard_view_model.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 
-class DashboardView extends StatelessWidget {
+class DashboardView extends StatefulWidget {
   final Widget child;
   final String currentPath;
 
@@ -17,37 +16,37 @@ class DashboardView extends StatelessWidget {
     required this.currentPath,
   });
 
-  void _navigateTo(String path) {
-    final routerService = locator<RouterService>();
+  @override
+  State<DashboardView> createState() => _DashboardViewState();
+}
 
-    // Smart navigation: if path already exists in stack, go back to it
-    // Otherwise, replace current route
-    if (routerService.existsInStack(path)) {
-      routerService.backUntil(Path(name: path));
-    } else {
-      routerService.replace(Path(name: path));
-    }
-  }
-
-  Future<void> _logout() async {
-    try {
-      await locator<AuthService>().logout();
-      locator<RouterService>().replaceAll([Path(name: '/login')]);
-    } catch (e) {
-      // Error handling is done in AuthService
-    }
-  }
+class _DashboardViewState extends State<DashboardView> {
+  late final DashboardViewModel _viewModel;
 
   @override
-  Widget build(BuildContext context) {
-    final viewModel = DashboardViewModel(
+  void initState() {
+    super.initState();
+    _viewModel = DashboardViewModel(
       authService: locator<AuthService>(),
       routerService: locator<RouterService>(),
       employeeRepository: locator<EmployeeRepository>(),
       shiftRepository: locator<ShiftRepository>(),
     );
+  }
 
-    final selectedIndex = viewModel.getSelectedIndex(currentPath);
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  void _navigateTo(String path) {
+    _viewModel.navigateTo(path);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedIndex = _viewModel.getSelectedIndex(widget.currentPath);
     final isDesktop = MediaQuery.of(context).size.width > 900;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -91,11 +90,23 @@ class DashboardView extends StatelessWidget {
     ];
 
     // Filter destinations based on role
-    final filteredDestinations = viewModel.isEmployee
+    final filteredDestinations = _viewModel.isEmployee
         ? [destinations[0], destinations[3], destinations[4]] // Главная, Сотрудники, График
         : destinations; // All items for manager
 
     return Scaffold(
+      appBar: !isDesktop
+          ? AppBar(
+              title: const Text('CRM'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: _viewModel.logout,
+                  tooltip: 'Выйти',
+                ),
+              ],
+            )
+          : null,
       body: Row(
         children: [
           if (isDesktop)
@@ -138,7 +149,7 @@ class DashboardView extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 24.0),
                     child: IconButton(
                       icon: const Icon(Icons.logout),
-                      onPressed: _logout,
+                      onPressed: _viewModel.logout,
                       tooltip: 'Выйти',
                       color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
                     ),
@@ -155,17 +166,7 @@ class DashboardView extends StatelessWidget {
                   )
                   .toList(),
             ),
-          Expanded(
-            child: isDesktop
-                ? child
-                : SafeArea(
-                    top: true,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: child,
-                    ),
-                  ),
-          ),
+          Expanded(child: widget.child),
         ],
       ),
       bottomNavigationBar: !isDesktop

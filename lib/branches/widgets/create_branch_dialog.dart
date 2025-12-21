@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/branches/branch_view_model.dart';
 
 /// Dialog for creating a new branch
@@ -43,7 +44,7 @@ class _CreateBranchDialogState extends State<CreateBranchDialog> {
       // Error message is handled by ViewModel and shown in parent
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.viewModel.errorMessage ?? 'Ошибка создания филиала'),
+          content: Text(widget.viewModel.operationState.errorOrNull ?? 'Ошибка создания филиала'),
           backgroundColor: Colors.red,
         ),
       );
@@ -77,7 +78,8 @@ class _CreateBranchDialogState extends State<CreateBranchDialog> {
 
               // Check for duplicate branch name
               final trimmedValue = value.trim();
-              final isDuplicate = widget.viewModel.branches.any(
+              final branches = widget.viewModel.branchesState.dataOrNull ?? [];
+              final isDuplicate = branches.any(
                 (b) => b.name.toLowerCase() == trimmedValue.toLowerCase(),
               );
 

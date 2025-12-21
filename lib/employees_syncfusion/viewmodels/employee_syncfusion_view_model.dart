@@ -1,48 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/models/employee.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/data/repositories/branch_repository.dart';
 import 'package:my_app/data/repositories/position_repository.dart';
-import 'package:my_app/data/models/position.dart';
 import 'package:my_app/employees_syncfusion/models/employee_syncfusion_model.dart';
 import 'package:my_app/employees_syncfusion/viewmodels/employee_data_source.dart';
+import 'package:my_app/core/utils/navigation/router_service.dart';
+import 'package:my_app/core/utils/navigation/route_data.dart';
+import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 
 class EmployeeSyncfusionViewModel extends ChangeNotifier {
   final EmployeeRepository _employeeRepository;
   final ShiftRepository _shiftRepository;
   final BranchRepository _branchRepository;
   final PositionRepository _positionRepository;
+  final RouterService _routerService;
+  final NotifyService _notifyService;
 
-  List<EmployeeSyncfusionModel> _employees = [];
+  AsyncValue<List<EmployeeSyncfusionModel>> _employeesState = const AsyncLoading();
   late final EmployeeDataSource _dataSource;
   String _searchQuery = '';
   String? _selectedBranch;
   String? _selectedRole;
   EmployeeStatus? _selectedStatus;
   Function(String)? _onDeleteEmployee;
-  bool _disposed = false; // Track disposed state
+  bool _disposed = false;
 
   // Filter options loaded from repository
   List<String> _availableBranches = [];
   List<String> _availableRoles = [];
   Map<String, double> _positionRates = {};
 
-  List<EmployeeSyncfusionModel> get employees => _employees;
+  AsyncValue<List<EmployeeSyncfusionModel>> get employeesState => _employeesState;
+  List<EmployeeSyncfusionModel> get employees => _employeesState.dataOrNull ?? [];
   EmployeeDataSource get dataSource => _dataSource;
   String get searchQuery => _searchQuery;
   String? get selectedBranch => _selectedBranch;
   String? get selectedRole => _selectedRole;
   EmployeeStatus? get selectedStatus => _selectedStatus;
   int get filteredCount => _dataSource.rows.length;
-  int get totalCount => _employees.length;
+  int get totalCount => employees.length;
   List<String> get availableBranches => _availableBranches;
   List<String> get availableRoles => _availableRoles;
   Map<String, double> get positionRates => _positionRates;
 
   // Get filtered employees list (for mobile cards view)
   List<EmployeeSyncfusionModel> get filteredEmployees {
-    List<EmployeeSyncfusionModel> filtered = List.from(_employees);
+    List<EmployeeSyncfusionModel> filtered = List.from(employees);
 
     // Apply branch filter
     if (_selectedBranch != null && _selectedBranch!.isNotEmpty) {
@@ -76,21 +82,28 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
     required ShiftRepository shiftRepository,
     required BranchRepository branchRepository,
     required PositionRepository positionRepository,
-    required BuildContext context,
+    required RouterService routerService,
+    required NotifyService notifyService,
   })  : _employeeRepository = employeeRepository,
         _shiftRepository = shiftRepository,
         _branchRepository = branchRepository,
-        _positionRepository = positionRepository {
-    // Initialize data source once with a wrapper for the callback
+        _positionRepository = positionRepository,
+        _routerService = routerService,
+        _notifyService = notifyService {
+    // Initialize data source with callback for navigation
     _dataSource = EmployeeDataSource(
       employees: [],
       onDeleteEmployee: (id) => _onDeleteEmployee?.call(id),
-      context: context,
+      onEmployeeTap: _navigateToEmployeeProfile,
     );
 
     // Load data
     _loadEmployees();
     _loadFilterOptions();
+  }
+
+  void _navigateToEmployeeProfile(String employeeId) {
+    _routerService.goTo(Path(name: '/dashboard/employees/$employeeId'));
   }
 
   Future<void> deleteEmployee(String employeeId) async {
@@ -99,7 +112,9 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
       await _employeeRepository.deleteEmployee(employeeId);
 
       // Remove from local list
-      _employees.removeWhere((e) => e.id == employeeId);
+      final currentEmployees = employees;
+      final updatedEmployees = currentEmployees.where((e) => e.id != employeeId).toList();
+      _employeesState = AsyncData(updatedEmployees);
 
       // Reapply filters to update the view
       _applyFilters();
@@ -133,6 +148,9 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
   }
 
   Future<void> _loadEmployees() async {
+    _employeesState = const AsyncLoading();
+    _safeNotifyListeners();
+
     try {
       // Load employees from repository (backend-ready)
       final employeesFromRepo = await _employeeRepository.getEmployees();
@@ -149,7 +167,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
       );
 
       // Convert Employee models to EmployeeSyncfusionModel for UI
-      _employees = employeesFromRepo.map((employee) {
+      final employeesList = employeesFromRepo.map((employee) {
         // Map status from string to EmployeeStatus enum
         EmployeeStatus status;
         switch (employee.status) {
@@ -189,12 +207,13 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
         );
       }).toList();
 
-      // Apply filters to show data
+      _employeesState = AsyncData(employeesList);
       _applyFilters();
+      _safeNotifyListeners();
     } catch (e) {
-      // On error, use empty list or fallback to mock data
-      _employees = [];
+      _employeesState = AsyncError('Ошибка загрузки сотрудников: $e');
       _applyFilters();
+      _safeNotifyListeners();
     }
   }
 
@@ -248,7 +267,7 @@ class EmployeeSyncfusionViewModel extends ChangeNotifier {
 
   // Применение всех фильтров одновременно (комбинированная фильтрация)
   void _applyFilters() {
-    List<EmployeeSyncfusionModel> filtered = List.from(_employees);
+    List<EmployeeSyncfusionModel> filtered = List.from(employees);
 
     // Применяем фильтр по филиалу
     if (_selectedBranch != null && _selectedBranch!.isNotEmpty) {

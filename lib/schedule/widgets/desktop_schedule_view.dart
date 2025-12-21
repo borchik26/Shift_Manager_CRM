@@ -45,7 +45,9 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                 builder: (context, constraints) {
                   final availableHeight = constraints.maxHeight;
                   final visibleCount = (availableHeight / 40).floor();
-                  final isMonthView = widget.viewModel.currentViewType == ScheduleViewType.month;
+                  final isMonthView =
+                      widget.viewModel.currentViewType ==
+                      ScheduleViewType.month;
                   return isMonthView
                       ? _buildMonthCalendar()
                       : _buildTimelineCalendar(visibleCount);
@@ -69,7 +71,9 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).dividerColor),
+        ),
       ),
       child: Row(
         children: [
@@ -78,7 +82,7 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
             height: 36,
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Поиск сотрудника...',
+                hintText: '',
                 prefixIcon: const Icon(Icons.search, size: 18),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
@@ -110,7 +114,8 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
               valueListenable: widget.viewModel.employeesState,
               builder: (context, employeesState, _) {
                 if (employeesState.isLoading) return const SizedBox();
-                if (employeesState is! AsyncData<List<Employee>>) return const SizedBox();
+                if (employeesState is! AsyncData<List<Employee>>)
+                  return const SizedBox();
                 return EmployeeFilterDropdown(
                   employees: employeesState.data,
                   selectedEmployeeId: widget.viewModel.employeeFilter,
@@ -191,7 +196,10 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
           itemBuilder: (context) => [
             const PopupMenuItem(
               enabled: false,
-              child: Text('Сортировка сотрудников:', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Сортировка сотрудников:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             const PopupMenuItem(
               value: 'name_asc',
@@ -246,7 +254,10 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
     return ValueListenableBuilder<AsyncValue<List<String>>>(
       valueListenable: widget.viewModel.branchesState,
       builder: (context, state, _) {
-        final isDisabled = state.isLoading || state.hasError || (state.dataOrNull?.isEmpty ?? true);
+        final isDisabled =
+            state.isLoading ||
+            state.hasError ||
+            (state.dataOrNull?.isEmpty ?? true);
         final items = state.dataOrNull ?? const <String>[];
 
         return Container(
@@ -266,7 +277,11 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                 const Text('🏢', style: TextStyle(fontSize: 14)),
                 const SizedBox(width: 8),
                 Text(
-                  state.isLoading ? 'Загрузка...' : state.hasError ? 'Ошибка' : 'Филиал',
+                  state.isLoading
+                      ? 'Загрузка...'
+                      : state.hasError
+                      ? 'Ошибка'
+                      : 'Филиал',
                   style: TextStyle(
                     fontSize: 14,
                     color: state.hasError ? Colors.red : Colors.blue.shade700,
@@ -296,7 +311,10 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
     return ValueListenableBuilder<AsyncValue<List<String>>>(
       valueListenable: widget.viewModel.rolesState,
       builder: (context, state, _) {
-        final isDisabled = state.isLoading || state.hasError || (state.dataOrNull?.isEmpty ?? true);
+        final isDisabled =
+            state.isLoading ||
+            state.hasError ||
+            (state.dataOrNull?.isEmpty ?? true);
         final items = state.dataOrNull ?? const <String>[];
 
         return Container(
@@ -318,7 +336,11 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                 const Text('👔', style: TextStyle(fontSize: 14)),
                 const SizedBox(width: 8),
                 Text(
-                  state.isLoading ? 'Загрузка...' : state.hasError ? 'Ошибка' : 'Должность',
+                  state.isLoading
+                      ? 'Загрузка...'
+                      : state.hasError
+                      ? 'Ошибка'
+                      : 'Должность',
                   style: TextStyle(
                     fontSize: 14,
                     color: state.hasError ? Colors.red : Colors.blue.shade700,
@@ -407,7 +429,11 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
       onAppointmentResizeEnd: (details) {
         if (details.appointment is! ShiftModel) return;
         final shift = details.appointment as ShiftModel;
-        widget.viewModel.updateShiftTime(shift.id, details.startTime!, details.endTime!);
+        widget.viewModel.updateShiftTime(
+          shift.id,
+          details.startTime!,
+          details.endTime!,
+        );
       },
     );
   }
@@ -448,8 +474,14 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               border: Border(
-                right: BorderSide(color: Theme.of(context).dividerColor, width: 1),
-                bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+                right: BorderSide(
+                  color: Theme.of(context).dividerColor,
+                  width: 1,
+                ),
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor,
+                  width: 1,
+                ),
               ),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -463,7 +495,10 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                     height: 28,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      image: DecorationImage(image: resource.image!, fit: BoxFit.cover),
+                      image: DecorationImage(
+                        image: resource.image!,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   )
                 else
@@ -471,7 +506,9 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                     backgroundColor: resource.color,
                     radius: 14,
                     child: Text(
-                      resource.displayName.isNotEmpty ? resource.displayName[0].toUpperCase() : '?',
+                      resource.displayName.isNotEmpty
+                          ? resource.displayName[0].toUpperCase()
+                          : '?',
                       style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
@@ -524,12 +561,19 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
       onAppointmentResizeEnd: (details) {
         if (details.appointment is! ShiftModel) return;
         final shift = details.appointment as ShiftModel;
-        widget.viewModel.updateShiftTime(shift.id, details.startTime!, details.endTime!);
+        widget.viewModel.updateShiftTime(
+          shift.id,
+          details.startTime!,
+          details.endTime!,
+        );
       },
     );
   }
 
-  Widget _buildAppointment(BuildContext context, CalendarAppointmentDetails details) {
+  Widget _buildAppointment(
+    BuildContext context,
+    CalendarAppointmentDetails details,
+  ) {
     final shift = details.appointments.first as ShiftModel;
     final backgroundColor = shift.color.withOpacity(0.15);
     final borderColor = shift.color;
@@ -557,7 +601,8 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                         child: Text(
                           shift.timeRange,
                           style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
                                 : Colors.black87,
                             fontWeight: FontWeight.w700,
@@ -567,9 +612,14 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (shift.employeePreferences != null && shift.employeePreferences!.isNotEmpty) ...[
+                      if (shift.employeePreferences != null &&
+                          shift.employeePreferences!.isNotEmpty) ...[
                         const SizedBox(width: 2),
-                        Icon(Icons.comment, size: 9, color: Colors.blue.shade700),
+                        Icon(
+                          Icons.comment,
+                          size: 9,
+                          color: Colors.blue.shade700,
+                        ),
                       ],
                     ],
                   ),
@@ -579,7 +629,10 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                       children: [
                         Flexible(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: shift.color,
                               borderRadius: BorderRadius.circular(4),
@@ -609,7 +662,9 @@ class _DesktopScheduleViewState extends State<DesktopScheduleView> {
                           child: Text(
                             shift.location,
                             style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white70
                                   : Colors.black54,
                               fontSize: 8,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/branches/branch_view_model.dart';
 import 'package:my_app/branches/widgets/create_branch_dialog.dart';
 import 'package:my_app/branches/widgets/edit_branch_dialog.dart';
@@ -92,6 +93,7 @@ class _BranchViewState extends State<BranchView> {
     if (confirmed == true) {
       final success = await _viewModel.deleteBranch(branch.id);
       if (mounted) {
+        final operationError = _viewModel.operationState.errorOrNull;
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -102,7 +104,7 @@ class _BranchViewState extends State<BranchView> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_viewModel.errorMessage ?? 'Ошибка удаления филиала'),
+              content: Text(operationError ?? 'Ошибка удаления филиала'),
               backgroundColor: Colors.red,
             ),
           );
@@ -138,21 +140,16 @@ class _BranchViewState extends State<BranchView> {
       body: ListenableBuilder(
         listenable: _viewModel,
         builder: (context, _) {
-          if (_viewModel.isLoading && _viewModel.branches.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          if (_viewModel.hasError && _viewModel.branches.isEmpty) {
-            return Center(
+          return _viewModel.branchesState.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (message) => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   Text(
-                    _viewModel.errorMessage ?? 'Произошла ошибка',
+                    message,
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -164,46 +161,43 @@ class _BranchViewState extends State<BranchView> {
                   ),
                 ],
               ),
-            );
-          }
-
-          if (_viewModel.branches.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.business_outlined, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Филиалы отсутствуют',
-                    style: Theme.of(context).textTheme.titleLarge,
+            ),
+            data: (branches) {
+              if (branches.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.business_outlined, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Филиалы отсутствуют',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Добавьте первый филиал',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey,
+                            ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: _showCreateDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Добавить филиал'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Добавьте первый филиал',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: _showCreateDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Добавить филиал'),
-                  ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
-          // Adaptive layout: Cards on mobile, Table on desktop
-          final isDesktop = MediaQuery.of(context).size.width >= 600;
-
-          return RefreshIndicator(
-            onRefresh: _loadBranches,
-            child: isDesktop
-                ? _buildDesktopLayout()
-                : _buildMobileLayout(),
+              final isDesktop = MediaQuery.of(context).size.width >= 600;
+              return RefreshIndicator(
+                onRefresh: _loadBranches,
+                child: isDesktop ? _buildDesktopLayout(branches) : _buildMobileLayout(branches),
+              );
+            },
           );
         },
       ),
@@ -217,12 +211,12 @@ class _BranchViewState extends State<BranchView> {
     );
   }
 
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(List<Branch> branches) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _viewModel.branches.length,
+      itemCount: branches.length,
       itemBuilder: (context, index) {
-        final branch = _viewModel.branches[index];
+        final branch = branches[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
@@ -278,7 +272,7 @@ class _BranchViewState extends State<BranchView> {
     );
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(List<Branch> branches) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Card(
@@ -322,10 +316,10 @@ class _BranchViewState extends State<BranchView> {
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _viewModel.branches.length,
+              itemCount: branches.length,
               separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final branch = _viewModel.branches[index];
+                final branch = branches[index];
                 return InkWell(
                   onTap: () => _showEditDialog(branch),
                   child: Padding(

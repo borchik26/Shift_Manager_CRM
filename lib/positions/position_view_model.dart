@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/data/models/position.dart';
 import 'package:my_app/data/repositories/position_repository.dart';
 
@@ -9,51 +10,44 @@ class PositionViewModel extends ChangeNotifier {
 
   final PositionRepository _positionRepository;
 
-  List<Position> _positions = [];
-  bool _isLoading = false;
-  String? _errorMessage;
+  AsyncValue<List<Position>> _positionsState = const AsyncLoading();
+  AsyncValue<void> _operationState = const AsyncData(null);
 
-  List<Position> get positions => List.unmodifiable(_positions);
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get hasError => _errorMessage != null;
+  AsyncValue<List<Position>> get positionsState => _positionsState;
+  AsyncValue<void> get operationState => _operationState;
 
   Future<void> loadPositions() async {
-    _isLoading = true;
-    _errorMessage = null;
+    _positionsState = const AsyncLoading();
     notifyListeners();
 
     try {
-      _positions = await _positionRepository.getPositions();
-      _errorMessage = null;
+      final positions = await _positionRepository.getPositions();
+      _positionsState = AsyncData(positions);
     } catch (e) {
-      _errorMessage = 'Не удалось загрузить должности: $e';
+      _positionsState = AsyncError('Не удалось загрузить должности: $e');
       debugPrint('Error loading positions: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   Future<bool> createPosition(String name, double hourlyRate) async {
     if (name.trim().isEmpty) {
-      _errorMessage = 'Название должности не может быть пустым';
+      _operationState = const AsyncError('Название должности не может быть пустым');
       notifyListeners();
       return false;
     }
     if (hourlyRate <= 0) {
-      _errorMessage = 'Ставка должна быть больше 0';
+      _operationState = const AsyncError('Ставка должна быть больше 0');
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
-    _errorMessage = null;
+    _operationState = const AsyncLoading();
     notifyListeners();
 
     try {
       final position = Position(
-        id: '', // Backend generates UUID
+        id: '',
         name: name.trim(),
         hourlyRate: hourlyRate,
         createdAt: DateTime.now(),
@@ -61,14 +55,13 @@ class PositionViewModel extends ChangeNotifier {
       );
 
       final created = await _positionRepository.createPosition(position);
-      _positions.add(created);
-      _errorMessage = null;
-      _isLoading = false;
+      final currentPositions = _positionsState.dataOrNull ?? [];
+      _positionsState = AsyncData([...currentPositions, created]);
+      _operationState = const AsyncData(null);
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Не удалось создать должность: $e';
-      _isLoading = false;
+      _operationState = AsyncError('Не удалось создать должность: $e');
       notifyListeners();
       debugPrint('Error creating position: $e');
       return false;
@@ -77,18 +70,17 @@ class PositionViewModel extends ChangeNotifier {
 
   Future<bool> updatePosition(Position position, String newName, double newRate) async {
     if (newName.trim().isEmpty) {
-      _errorMessage = 'Название должности не может быть пустым';
+      _operationState = const AsyncError('Название должности не может быть пустым');
       notifyListeners();
       return false;
     }
     if (newRate <= 0) {
-      _errorMessage = 'Ставка должна быть больше 0';
+      _operationState = const AsyncError('Ставка должна быть больше 0');
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
-    _errorMessage = null;
+    _operationState = const AsyncLoading();
     notifyListeners();
 
     try {
@@ -99,18 +91,19 @@ class PositionViewModel extends ChangeNotifier {
       );
 
       final result = await _positionRepository.updatePosition(updated);
-      final index = _positions.indexWhere((p) => p.id == position.id);
+      final currentPositions = _positionsState.dataOrNull ?? [];
+      final index = currentPositions.indexWhere((p) => p.id == position.id);
       if (index != -1) {
-        _positions[index] = result;
+        final updatedList = [...currentPositions];
+        updatedList[index] = result;
+        _positionsState = AsyncData(updatedList);
       }
 
-      _errorMessage = null;
-      _isLoading = false;
+      _operationState = const AsyncData(null);
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Не удалось обновить должность: $e';
-      _isLoading = false;
+      _operationState = AsyncError('Не удалось обновить должность: $e');
       notifyListeners();
       debugPrint('Error updating position: $e');
       return false;
@@ -118,20 +111,18 @@ class PositionViewModel extends ChangeNotifier {
   }
 
   Future<bool> deletePosition(String id) async {
-    _isLoading = true;
-    _errorMessage = null;
+    _operationState = const AsyncLoading();
     notifyListeners();
 
     try {
       await _positionRepository.deletePosition(id);
-      _positions.removeWhere((p) => p.id == id);
-      _errorMessage = null;
-      _isLoading = false;
+      final currentPositions = _positionsState.dataOrNull ?? [];
+      _positionsState = AsyncData(currentPositions.where((p) => p.id != id).toList());
+      _operationState = const AsyncData(null);
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'Не удалось удалить должность: $e';
-      _isLoading = false;
+      _operationState = AsyncError('Не удалось удалить должность: $e');
       notifyListeners();
       debugPrint('Error deleting position: $e');
       return false;
@@ -139,12 +130,7 @@ class PositionViewModel extends ChangeNotifier {
   }
 
   void clearError() {
-    _errorMessage = null;
+    _operationState = const AsyncData(null);
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }

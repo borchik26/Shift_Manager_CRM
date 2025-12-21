@@ -367,7 +367,11 @@ class DashboardViewModel {
   }
 
   void navigateTo(String path) {
-    _routerService.replace(Path(name: path));
+    if (_routerService.existsInStack(path)) {
+      _routerService.backUntil(Path(name: path));
+    } else {
+      _routerService.replace(Path(name: path));
+    }
   }
 
   Future<void> logout() async {

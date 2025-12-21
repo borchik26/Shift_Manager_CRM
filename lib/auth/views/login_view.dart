@@ -3,7 +3,6 @@ import 'package:my_app/auth/viewmodels/auth_view_model.dart';
 import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
-import 'package:my_app/core/utils/navigation/route_data.dart';
 import 'package:my_app/core/services/auth_service.dart';
 
 class LoginView extends StatefulWidget {
@@ -25,6 +24,7 @@ class _LoginViewState extends State<LoginView> {
     super.initState();
     _viewModel = AuthViewModel(
       authService: locator<AuthService>(),
+      routerService: locator<RouterService>(),
     );
   }
 
@@ -42,20 +42,6 @@ class _LoginViewState extends State<LoginView> {
         _emailController.text,
         _passwordController.text,
       );
-
-      if (!mounted) return;
-
-      final state = _viewModel.loginState.value;
-      if (state is AsyncData) {
-        locator<RouterService>().replace(Path(name: '/dashboard'));
-      } else if (state is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.message),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -182,10 +168,7 @@ class _LoginViewState extends State<LoginView> {
                             style: TextStyle(color: Colors.grey),
                           ),
                           TextButton(
-                            onPressed: () {
-                              locator<RouterService>()
-                                  .replace(Path(name: '/register'));
-                            },
+                            onPressed: _viewModel.navigateToRegister,
                             child: const Text('Зарегистрироваться'),
                           ),
                         ],

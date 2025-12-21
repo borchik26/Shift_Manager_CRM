@@ -97,16 +97,16 @@ class ScheduleViewModel extends ChangeNotifier {
     refreshRoles();
   }
 
-  final state = ValueNotifier<AsyncValue<List<ShiftModel>>>(
+  late final state = ValueNotifier<AsyncValue<List<ShiftModel>>>(
     const AsyncLoading(),
   );
-  final employeesState = ValueNotifier<AsyncValue<List<Employee>>>(
+  late final employeesState = ValueNotifier<AsyncValue<List<Employee>>>(
     const AsyncLoading(),
   );
-  final branchesState = ValueNotifier<AsyncValue<List<String>>>(
+  late final branchesState = ValueNotifier<AsyncValue<List<String>>>(
     const AsyncLoading(),
   );
-  final rolesState = ValueNotifier<AsyncValue<List<String>>>(
+  late final rolesState = ValueNotifier<AsyncValue<List<String>>>(
     const AsyncLoading(),
   );
 

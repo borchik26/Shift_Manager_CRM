@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/ui/widgets/confirmation_dialog.dart';
 import 'package:my_app/core/ui/widgets/filter_dropdown.dart';
+import 'package:my_app/core/utils/async_value.dart';
 import 'package:my_app/core/utils/locator.dart';
 import 'package:my_app/core/utils/responsive_helper.dart';
-import 'package:my_app/core/utils/navigation/route_data.dart';
+import 'package:my_app/core/services/auth_service.dart';
 import 'package:my_app/core/utils/navigation/router_service.dart';
+import 'package:my_app/core/utils/navigation/route_data.dart';
+import 'package:my_app/core/utils/internal_notification/notify_service.dart';
 import 'package:my_app/data/repositories/employee_repository.dart';
 import 'package:my_app/data/repositories/shift_repository.dart';
 import 'package:my_app/data/repositories/branch_repository.dart';
@@ -28,6 +30,7 @@ class EmployeeSyncfusionView extends StatefulWidget {
 class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
     with SingleTickerProviderStateMixin {
   EmployeeSyncfusionViewModel? _viewModel;
+  late final RouterService _routerService;
   final TextEditingController _searchController = TextEditingController();
   String? _selectedBranch;
   String? _selectedRole;
@@ -39,6 +42,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
   void initState() {
     super.initState();
 
+    _routerService = locator<RouterService>();
     final authService = locator<AuthService>();
 
     // If employee - redirect to own profile
@@ -48,7 +52,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       if (currentUserId != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            locator<RouterService>().replace(
+            _routerService.replace(
               Path(name: '/dashboard/employees/$currentUserId'),
             );
           }
@@ -64,7 +68,8 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       shiftRepository: locator<ShiftRepository>(),
       branchRepository: locator<BranchRepository>(),
       positionRepository: locator<PositionRepository>(),
-      context: context,
+      routerService: _routerService,
+      notifyService: locator<NotifyService>(),
     );
     _viewModel!.setDeleteCallback(_onDeleteEmployee);
   }
@@ -74,7 +79,8 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
       context: context,
       builder: (context) => const ConfirmationDialog(
         title: 'Подтверждение удаления',
-        message: 'Вы уверены, что хотите удалить этого сотрудника? '
+        message:
+            'Вы уверены, что хотите удалить этого сотрудника? '
             'Это действие нельзя отменить.',
         confirmText: 'Удалить',
       ),
@@ -145,14 +151,16 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
           children: [
             // Header - адаптивный
             Padding(
-              padding: EdgeInsets.all(isMobile ? 12 : 24.0),
+              padding: isMobile
+                ? const EdgeInsets.fromLTRB(8, 4, 8, 0)
+                : const EdgeInsets.all(24.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Управление сотрудниками',
                     style: TextStyle(
-                      fontSize: isMobile ? 18 : 24,
+                      fontSize: isMobile ? 16 : 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -160,7 +168,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                     // Mobile: IconButton
                     IconButton(
                       onPressed: _showCreateEmployeeDialog,
-                      icon: const Icon(Icons.add_circle, size: 32),
+                      icon: const Icon(Icons.add_circle, size: 28),
                       color: Theme.of(context).colorScheme.primary,
                       tooltip: 'Добавить сотрудника',
                     )
@@ -370,10 +378,11 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Поиск',
+                          hintText: '',
                           hintStyle: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                            color: Theme.of(context).textTheme.bodySmall?.color
+                                ?.withValues(alpha: 0.6),
                           ),
                           suffixIcon: const Icon(
                             Icons.search,
@@ -426,7 +435,9 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
                   'Показано: ${_viewModel!.filteredCount} из ${_viewModel!.totalCount} сотрудников',
                   style: TextStyle(
                     fontSize: isMobile ? 12 : 13,
-                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -499,40 +510,64 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
 
   // Mobile List View with Cards
   Widget _buildMobileList() {
-    final employees = _viewModel!.filteredEmployees;
-
-    if (employees.isEmpty) {
-      return Center(
+    return _viewModel!.employeesState.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (message) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.people_outline,
-              size: 64,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.4),
-            ),
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text(
-              'Сотрудники не найдены',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-              ),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _viewModel!.reloadEmployees(),
+              child: const Text('Повторить'),
             ),
           ],
         ),
-      );
-    }
+      ),
+      data: (_) {
+        final employees = _viewModel!.filteredEmployees;
 
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 0),
-      itemCount: employees.length,
-      itemBuilder: (context, index) {
-        final employee = employees[index];
-        return EmployeeCard(
-          employee: employee,
-          onTap: () => _onEmployeeTap(employee.id),
-          onDelete: () => _onDeleteEmployee(employee.id),
+        if (employees.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.color?.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Сотрудники не найдены',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8, bottom: 0),
+          itemCount: employees.length,
+          itemBuilder: (context, index) {
+            final employee = employees[index];
+            return EmployeeCard(
+              employee: employee,
+              onTap: () => _onEmployeeTap(employee.id),
+              onDelete: () => _onDeleteEmployee(employee.id),
+            );
+          },
         );
       },
     );
@@ -540,8 +575,7 @@ class _EmployeeSyncfusionViewState extends State<EmployeeSyncfusionView>
 
   // Navigate to employee profile
   void _onEmployeeTap(String employeeId) {
-    // Using RouterService from data_source
-    locator<RouterService>().goTo(
+    _routerService.goTo(
       Path(name: '/dashboard/employees/$employeeId'),
     );
   }
